@@ -4,9 +4,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
 )
 
 func init() {
@@ -23,11 +22,11 @@ func TestTokenDao(t *testing.T) {
 	dao.Drop()
 
 	token := &types.Token{
-		Symbol:          "PRFT",
-		Address: common.HexToAddress("0x6e9a406696617ec5105f9382d33ba3360fcfabcc"),
-		Decimals:        18,
-		Active:          true,
-		Quote:           true,
+		Symbol:   "PRFT",
+		Asset:  "0x6e9a406696617ec5105f9382d33ba3360fcfabcc",
+		Decimals: 18,
+		Active:   true,
+		Quote:    true,
 	}
 
 	err := dao.Create(token)
@@ -49,10 +48,10 @@ func TestTokenDao(t *testing.T) {
 
 	testutils.CompareToken(t, token, byId)
 
-	byAddress, err := dao.GetByAddress(common.HexToAddress("0x6e9a406696617ec5105f9382d33ba3360fcfabcc"))
+	tokenByAsset, err := dao.GetByAsset("0x6e9a406696617ec5105f9382d33ba3360fcfabcc")
 	if err != nil {
-		t.Errorf("Could not get token by address: %+v", err)
+		t.Errorf("Could not get token by asset: %+v", err)
 	}
 
-	testutils.CompareToken(t, token, byAddress)
+	testutils.CompareToken(t, token, tokenByAsset)
 }

@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/utils"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -116,7 +116,7 @@ func NewSecureTLSSession() *mgo.Session {
 		Addrs:    []string{app.Config.MongoURL},
 		Username: app.Config.MongoDBUsername,
 		Password: app.Config.MongoDBPassword,
-		Database: "proofdex",
+		Database: "odex",
 	}
 
 	dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {

@@ -2,16 +2,15 @@ package daos
 
 import (
 	"io/ioutil"
-	"math/big"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
 	"github.com/globalsign/mgo/bson"
 )
 
 func init() {
+	server := testutils.NewDBTestServer()
 	temp, _ := ioutil.TempDir("", "test")
 	server.SetPath(temp)
 
@@ -23,14 +22,12 @@ func TestPairDao(t *testing.T) {
 	dao := NewPairDao()
 
 	pair := &types.Pair{
-		ID:                bson.NewObjectId(),
-		BaseTokenSymbol:   "REQ",
-		BaseTokenAddress:  common.HexToAddress("0xcf7389dc6c63637598402907d5431160ec8972a5"),
-		QuoteTokenSymbol:  "WETH",
-		QuoteTokenAddress: common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"),
-		Active:            true,
-		MakeFee:           big.NewInt(10000),
-		TakeFee:           big.NewInt(10000),
+		ID:               bson.NewObjectId(),
+		BaseTokenSymbol:  "REQ",
+		BaseAsset:        "0xcf7389dc6c63637598402907d5431160ec8972a5",
+		QuoteTokenSymbol: "WETH",
+		QuoteAsset:       "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		Active:           true,
 	}
 
 	err := dao.Create(pair)
@@ -52,10 +49,10 @@ func TestPairDao(t *testing.T) {
 
 	testutils.ComparePair(t, pair, byID)
 
-	byAddress, err := dao.GetByTokenAddress(pair.BaseTokenAddress, pair.QuoteTokenAddress)
+	pairByAsset, err := dao.GetByAsset(pair.BaseAsset, pair.QuoteAsset)
 	if err != nil {
-		t.Errorf("Could not get pair by address: %v", err)
+		t.Errorf("Could not get pair by asset: %v", err)
 	}
 
-	testutils.ComparePair(t, pair, byAddress)
+	testutils.ComparePair(t, pair, pairByAsset)
 }

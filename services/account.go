@@ -1,11 +1,8 @@
 package services
 
 import (
-	"math/big"
-
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -42,17 +39,16 @@ func (s *AccountService) Create(a *types.Account) error {
 	}
 
 	a.IsBlocked = false
-	a.TokenBalances = make(map[common.Address]*types.TokenBalance)
+	a.TokenBalances = make(map[string]*types.TokenBalance)
 
 	// currently by default, the tokens balances are set to 0
 	for _, token := range tokens {
-		a.TokenBalances[token.Address] = &types.TokenBalance{
-			Address:        token.Address,
+		a.TokenBalances[token.Asset] = &types.TokenBalance{
+			Asset:          token.Asset,
 			Symbol:         token.Symbol,
-			Balance:        big.NewInt(0),
-			Allowance:      big.NewInt(0),
-			LockedBalance:  big.NewInt(0),
-			PendingBalance: big.NewInt(0),
+			Balance:        0,
+			LockedBalance:  0,
+			PendingBalance: 0,
 		}
 	}
 
@@ -67,7 +63,7 @@ func (s *AccountService) Create(a *types.Account) error {
 	return nil
 }
 
-func (s *AccountService) FindOrCreate(addr common.Address) (*types.Account, error) {
+func (s *AccountService) FindOrCreate(addr string) (*types.Account, error) {
 	a, err := s.AccountDao.GetByAddress(addr)
 	if err != nil {
 		logger.Error(err)
@@ -87,18 +83,17 @@ func (s *AccountService) FindOrCreate(addr common.Address) (*types.Account, erro
 	a = &types.Account{
 		Address:       addr,
 		IsBlocked:     false,
-		TokenBalances: make(map[common.Address]*types.TokenBalance),
+		TokenBalances: make(map[string]*types.TokenBalance),
 	}
 
 	// currently by default, the tokens balances are set to 0
 	for _, t := range tokens {
-		a.TokenBalances[t.Address] = &types.TokenBalance{
-			Address:        t.Address,
+		a.TokenBalances[t.Asset] = &types.TokenBalance{
+			Asset:          t.Asset,
 			Symbol:         t.Symbol,
-			Balance:        big.NewInt(0),
-			Allowance:      big.NewInt(0),
-			LockedBalance:  big.NewInt(0),
-			PendingBalance: big.NewInt(0),
+			Balance:        0,
+			LockedBalance:  0,
+			PendingBalance: 0,
 		}
 	}
 
@@ -119,14 +114,14 @@ func (s *AccountService) GetAll() ([]types.Account, error) {
 	return s.AccountDao.GetAll()
 }
 
-func (s *AccountService) GetByAddress(a common.Address) (*types.Account, error) {
+func (s *AccountService) GetByAddress(a string) (*types.Account, error) {
 	return s.AccountDao.GetByAddress(a)
 }
 
-func (s *AccountService) GetTokenBalance(owner common.Address, token common.Address) (*types.TokenBalance, error) {
+func (s *AccountService) GetTokenBalance(owner string, token string) (*types.TokenBalance, error) {
 	return s.AccountDao.GetTokenBalance(owner, token)
 }
 
-func (s *AccountService) GetTokenBalances(owner common.Address) (map[common.Address]*types.TokenBalance, error) {
+func (s *AccountService) GetTokenBalances(owner string) (map[string]*types.TokenBalance, error) {
 	return s.AccountDao.GetTokenBalances(owner)
 }

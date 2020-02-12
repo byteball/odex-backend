@@ -5,21 +5,21 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/utils/httputils"
 	"github.com/gorilla/mux"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/ws"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/ws"
 )
 
 type orderEndpoint struct {
 	orderService   interfaces.OrderService
 	accountService interfaces.AccountService
-	engine         interfaces.Engine
+	obyteProvider  interfaces.ObyteProvider
 }
 
 // ServeOrderResource sets up the routing of order endpoints and the corresponding handlers.
@@ -27,11 +27,12 @@ func ServeOrderResource(
 	r *mux.Router,
 	orderService interfaces.OrderService,
 	accountService interfaces.AccountService,
-	engine interfaces.Engine,
+	obyteProvider interfaces.ObyteProvider,
 ) {
-	e := &orderEndpoint{orderService, accountService, engine}
+	e := &orderEndpoint{orderService, accountService, obyteProvider}
 	r.HandleFunc("/orders/history", e.handleGetOrderHistory).Methods("GET")
-	r.HandleFunc("/orders/positions", e.handleGetPositions).Methods("GET")
+	r.HandleFunc("/orders/current", e.handleGetCurrentOrders).Methods("GET")
+	r.HandleFunc("/orders/positions", e.handleGetCurrentOrders).Methods("GET")
 	r.HandleFunc("/orders", e.handleGetOrders).Methods("GET")
 	ws.RegisterChannel(ws.OrderChannel, e.ws)
 }
@@ -46,14 +47,14 @@ func (e *orderEndpoint) handleGetOrders(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if !common.IsHexAddress(addr) {
+	if !isValidAddress(addr) {
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid Address")
 		return
 	}
 
 	var err error
 	var orders []*types.Order
-	address := common.HexToAddress(addr)
+	address := addr
 
 	if limit == "" {
 		orders, err = e.orderService.GetByUserAddress(address)
@@ -76,7 +77,7 @@ func (e *orderEndpoint) handleGetOrders(w http.ResponseWriter, r *http.Request) 
 	httputils.WriteJSON(w, http.StatusOK, orders)
 }
 
-func (e *orderEndpoint) handleGetPositions(w http.ResponseWriter, r *http.Request) {
+func (e *orderEndpoint) handleGetCurrentOrders(w http.ResponseWriter, r *http.Request) {
 	v := r.URL.Query()
 	addr := v.Get("address")
 	limit := v.Get("limit")
@@ -86,14 +87,14 @@ func (e *orderEndpoint) handleGetPositions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if !common.IsHexAddress(addr) {
+	if !isValidAddress(addr) {
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid Address")
 		return
 	}
 
 	var err error
 	var orders []*types.Order
-	address := common.HexToAddress(addr)
+	address := addr
 
 	if limit == "" {
 		orders, err = e.orderService.GetCurrentByUserAddress(address)
@@ -126,14 +127,14 @@ func (e *orderEndpoint) handleGetOrderHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !common.IsHexAddress(addr) {
+	if !isValidAddress(addr) {
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid Address")
 		return
 	}
 
 	var err error
 	var orders []*types.Order
-	address := common.HexToAddress(addr)
+	address := addr
 
 	if limit == "" {
 		orders, err = e.orderService.GetHistoryByUserAddress(address)
@@ -163,10 +164,12 @@ func (e *orderEndpoint) ws(input interface{}, c *ws.Client) {
 	bytes, _ := json.Marshal(input)
 	if err := json.Unmarshal(bytes, &msg); err != nil {
 		logger.Error(err)
-		c.SendMessage(ws.OrderChannel, "ERROR", err.Error())
+		go c.SendMessage(ws.OrderChannel, "ERROR", err.Error())
 	}
 
 	switch msg.Type {
+	case "ADDRESS":
+		e.handleAddress(msg, c)
 	case "NEW_ORDER":
 		e.handleNewOrder(msg, c)
 	case "CANCEL_ORDER":
@@ -178,12 +181,20 @@ func (e *orderEndpoint) ws(input interface{}, c *ws.Client) {
 
 // handleNewOrder handles NewOrder message. New order messages are transmitted to the order service after being unmarshalled
 func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
-	o := &types.Order{}
+	_, err := e.obyteProvider.AddOrder(&ev.Payload)
+	if err != nil {
+		logger.Error(err)
+		//payload := map[string]string{"hash": hash, "error": err.Error()}
+		payload := err.Error()
+		go c.SendMessage(ws.OrderChannel, "ERROR", payload)
+		return
+	}
+	/*o := &types.Order{}
 
 	bytes, err := json.Marshal(ev.Payload)
 	if err != nil {
 		logger.Error(err)
-		c.SendMessage(ws.OrderChannel, "ERROR", err.Error())
+		go c.SendMessage(ws.OrderChannel, "ERROR", err.Error())
 		return
 	}
 
@@ -194,7 +205,7 @@ func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
 		return
 	}
 
-	o.Hash = o.ComputeHash()
+	//o.Hash = o.ComputeHash()
 	ws.RegisterOrderConnection(o.UserAddress, c)
 
 	acc, err := e.accountService.FindOrCreate(o.UserAddress)
@@ -204,7 +215,7 @@ func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
 	}
 
 	if acc.IsBlocked {
-		c.SendMessage(ws.OrderChannel, "ERROR", errors.New("Account is blocked"))
+		go c.SendMessage(ws.OrderChannel, "ERROR", errors.New("Account is blocked"))
 	}
 
 	err = e.orderService.NewOrder(o)
@@ -212,32 +223,77 @@ func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
 		logger.Error(err)
 		c.SendOrderErrorMessage(err, o.Hash)
 		return
-	}
+	}*/
 }
 
 // handleCancelOrder handles CancelOrder message.
 func (e *orderEndpoint) handleCancelOrder(ev *types.WebsocketEvent, c *ws.Client) {
-	bytes, err := json.Marshal(ev.Payload)
+	err := e.obyteProvider.CancelOrder(&ev.Payload)
+	if err != nil {
+		logger.Error(err)
+		go c.SendMessage(ws.OrderChannel, "ERROR", err.Error())
+		return
+	}
+
+	/*bytes, err := json.Marshal(ev.Payload)
 	oc := &types.OrderCancel{}
 
 	err = oc.UnmarshalJSON(bytes)
 	if err != nil {
 		logger.Error(err)
 		c.SendOrderErrorMessage(err, oc.OrderHash)
+		return
 	}
 
-	addr, err := oc.GetSenderAddress()
+	addr, err := e.orderService.GetSenderAddress(oc)
 	if err != nil {
 		logger.Error(err)
 		c.SendOrderErrorMessage(err, oc.OrderHash)
+		return
 	}
 
-	ws.RegisterOrderConnection(addr, c)
+	//ws.RegisterOrderConnection(addr, c)
+	if !ws.IsClientConnected(addr, c) {
+		err := errors.New("client not connected to this address")
+		logger.Error(err)
+		c.SendOrderErrorMessage(err, oc.OrderHash)
+		return
+	}
+
+	if !ws.IsClientConnectedToSession(oc.SessionId, c) {
+		err := errors.New("client not connected to this session id")
+		logger.Error(err)
+		c.SendOrderErrorMessage(err, oc.OrderHash)
+		return
+	}
 
 	orderErr := e.orderService.CancelOrder(oc)
 	if orderErr != nil {
 		logger.Error(err)
 		c.SendOrderErrorMessage(orderErr, oc.OrderHash)
 		return
+	}*/
+}
+
+func (e *orderEndpoint) handleAddress(ev *types.WebsocketEvent, c *ws.Client) {
+	if reflect.TypeOf(ev.Payload).Kind() != reflect.String {
+		logger.Error("bad type of payload")
+		go c.SendMessage(ws.OrderChannel, "ERROR", errors.New("bad type of payload"))
+		return
+	}
+
+	address := ev.Payload.(string)
+
+	ws.RegisterOrderConnection(address, c)
+
+	acc, err := e.accountService.FindOrCreate(address)
+	if err != nil {
+		logger.Error(err)
+		go c.SendMessage(ws.OrderChannel, "ERROR", err)
+		return
+	}
+
+	if acc.IsBlocked {
+		go c.SendMessage(ws.OrderChannel, "ERROR", errors.New("Account is blocked"))
 	}
 }

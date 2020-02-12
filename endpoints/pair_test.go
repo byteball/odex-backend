@@ -3,15 +3,15 @@ package endpoints
 import (
 	"bytes"
 	"encoding/json"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils/mocks"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/services"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"github.com/byteball/odex-backend/utils/testutils/mocks"
 	"github.com/gorilla/mux"
 )
 
@@ -28,18 +28,16 @@ func TestHandleCreatePair(t *testing.T) {
 	router, pairService := SetupPairEndpointTest()
 
 	pair := types.Pair{
-		BaseTokenSymbol:   "ZRX",
-		BaseTokenAddress:  common.HexToAddress("0x1"),
-		QuoteTokenSymbol:  "WETH",
-		QuoteTokenAddress: common.HexToAddress("0x2"),
-		MakeFee:           big.NewInt(1e4),
-		TakeFee:           big.NewInt(1e4),
+		BaseTokenSymbol:  "ZRX",
+		BaseAsset:        "0x1",
+		QuoteTokenSymbol: "WETH",
+		QuoteAsset:       "0x2",
 	}
 
 	pairService.On("Create", &pair).Return(nil)
 
 	b, _ := json.Marshal(pair)
-	req, err := http.NewRequest("POST", "/pairs", bytes.NewBuffer(b))
+	req, err := http.NewRequest("POST", "/pair/create", bytes.NewBuffer(b))
 	if err != nil {
 		t.Error(err)
 	}
@@ -51,28 +49,26 @@ func TestHandleCreatePair(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusCreated)
 	}
 
-	created := types.Pair{}
+	created := struct{ Data types.Pair }{}
 	json.NewDecoder(rr.Body).Decode(&created)
 
 	pairService.AssertCalled(t, "Create", &pair)
-	testutils.ComparePair(t, &pair, &created)
+	testutils.ComparePair(t, &pair, &created.Data)
 }
 
 func TestHandleCreateInvalidPair(t *testing.T) {
 	router, pairService := SetupPairEndpointTest()
 
 	pair := types.Pair{
-		BaseTokenSymbol:   "ZRX",
-		BaseTokenAddress:  common.HexToAddress("0x1"),
-		QuoteTokenAddress: common.HexToAddress("0x2"),
-		MakeFee:           big.NewInt(1e4),
-		TakeFee:           big.NewInt(1e4),
+		BaseTokenSymbol: "ZRX",
+		BaseAsset:       "0x1",
+		QuoteAsset:      "0x2",
 	}
 
-	pairService.On("Create", &pair).Return(nil)
+	pairService.On("Create", &pair).Return(services.ErrBaseTokenNotFound)
 
 	b, _ := json.Marshal(pair)
-	req, err := http.NewRequest("POST", "/pairs", bytes.NewBuffer(b))
+	req, err := http.NewRequest("POST", "/pair/create", bytes.NewBuffer(b))
 	if err != nil {
 		t.Error(err)
 	}
@@ -89,19 +85,15 @@ func TestHandleGetAllPairs(t *testing.T) {
 	router, pairService := SetupPairEndpointTest()
 
 	p1 := types.Pair{
-		BaseTokenSymbol:   "ZRX",
-		BaseTokenAddress:  common.HexToAddress("0x1"),
-		QuoteTokenAddress: common.HexToAddress("0x2"),
-		MakeFee:           big.NewInt(1e4),
-		TakeFee:           big.NewInt(1e4),
+		BaseTokenSymbol: "ZRX",
+		BaseAsset:       "0x1",
+		QuoteAsset:      "0x2",
 	}
 
 	p2 := types.Pair{
-		BaseTokenSymbol:   "WETH",
-		BaseTokenAddress:  common.HexToAddress("0x3"),
-		QuoteTokenAddress: common.HexToAddress("0x4"),
-		MakeFee:           big.NewInt(1e4),
-		TakeFee:           big.NewInt(1e4),
+		BaseTokenSymbol: "WETH",
+		BaseAsset:       "0x3",
+		QuoteAsset:      "0x4",
 	}
 
 	pairService.On("GetAll").Return([]types.Pair{p1, p2}, nil)
@@ -118,32 +110,30 @@ func TestHandleGetAllPairs(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := []types.Pair{}
+	result := struct{ Data []types.Pair }{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
 	pairService.AssertCalled(t, "GetAll")
-	testutils.ComparePair(t, &p1, &result[0])
-	testutils.ComparePair(t, &p2, &result[1])
+	testutils.ComparePair(t, &p1, &result.Data[0])
+	testutils.ComparePair(t, &p2, &result.Data[1])
 }
 
 func TestHandleGetPair(t *testing.T) {
 	router, pairService := SetupPairEndpointTest()
 
-	base := common.HexToAddress("0x1")
-	quote := common.HexToAddress("0x2")
+	base := "PP7/+yQc6+XAZ1WBsUzGwcmfIlInIRLsLlfoWJc/3kY="
+	quote := "7l7GzugRUz9b/q7M+A1K9IIQ5yWnqlB6CyImXx73TQs="
 
 	p1 := types.Pair{
-		BaseTokenSymbol:   "ZRX",
-		QuoteTokenSymbol:  "WETH",
-		BaseTokenAddress:  base,
-		QuoteTokenAddress: quote,
-		MakeFee:           big.NewInt(1e4),
-		TakeFee:           big.NewInt(1e4),
+		BaseTokenSymbol:  "ZRX",
+		QuoteTokenSymbol: "WETH",
+		BaseAsset:        base,
+		QuoteAsset:       quote,
 	}
 
-	pairService.On("GetByTokenAddress", base, quote).Return(&p1, nil)
+	pairService.On("GetByAsset", base, quote).Return(&p1, nil)
 
-	url := "/pairs/" + base.Hex() + "/" + quote.Hex()
+	url := "/pair?baseToken=" + url.QueryEscape(base) + "&quoteToken=" + url.QueryEscape(quote)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Error(err)
@@ -156,9 +146,9 @@ func TestHandleGetPair(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := types.Pair{}
+	result := struct{ Data types.Pair }{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
-	pairService.AssertCalled(t, "GetByTokenAddress", base, quote)
-	testutils.ComparePair(t, &p1, &result)
+	pairService.AssertCalled(t, "GetByAsset", base, quote)
+	testutils.ComparePair(t, &p1, &result.Data)
 }

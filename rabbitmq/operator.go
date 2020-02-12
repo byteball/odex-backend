@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/types"
 	"github.com/streadway/amqp"
 )
 
@@ -78,7 +79,7 @@ func (c *Connection) UnsubscribeOperator() error {
 func (c *Connection) PurgeOperatorQueue() error {
 	ch := c.GetChannel("OPERATOR_SUB")
 
-	_, err := ch.QueuePurge("TX_MESSAGES", false)
+	_, err := ch.QueuePurge("TX_MESSAGES"+"@"+app.Config.Env, false)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -183,7 +184,7 @@ func (c *Connection) PublishTxErrorMessage(matches *types.Matches, errType strin
 	return nil
 }
 
-func (c *Connection) PublishTradeInvalidMessage(matches *types.Matches) error {
+/*func (c *Connection) PublishTradeInvalidMessage(matches *types.Matches) error {
 	ch := c.GetChannel("OPERATOR_PUB")
 	q := c.GetQueue(ch, "TX_MESSAGES")
 	msg := &types.OperatorMessage{
@@ -204,7 +205,7 @@ func (c *Connection) PublishTradeInvalidMessage(matches *types.Matches) error {
 
 	logger.Info("PUBLISHED TRADE INVALID MESSAGE")
 	return nil
-}
+}*/
 
 func (c *Connection) PublishTradeSentMessage(matches *types.Matches) error {
 	ch := c.GetChannel("OPERATOR_PUB")

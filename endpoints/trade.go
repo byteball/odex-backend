@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/gorilla/mux"
 )
 
@@ -25,7 +24,7 @@ func ServeTradeResource(
 ) {
 	e := &tradeEndpoint{tradeService}
 	r.HandleFunc("/trades/pair", e.HandleGetTradeHistory)
-	r.HandleFunc("/trades", e.HandleGetTrades)
+	r.HandleFunc("/trades", e.HandleGetTrades).Methods("GET")
 	ws.RegisterChannel(ws.TradeChannel, e.tradeWebsocket)
 }
 
@@ -46,13 +45,13 @@ func (e *tradeEndpoint) HandleGetTradeHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !common.IsHexAddress(bt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid base token address")
+	if !isValidAsset(bt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid base token asset in trade")
 		return
 	}
 
-	if !common.IsHexAddress(qt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid quote token address")
+	if !isValidAsset(qt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid quote token asset in trade")
 		return
 	}
 
@@ -61,8 +60,8 @@ func (e *tradeEndpoint) HandleGetTradeHistory(w http.ResponseWriter, r *http.Req
 		limit, _ = strconv.Atoi(l)
 	}
 
-	baseToken := common.HexToAddress(bt)
-	quoteToken := common.HexToAddress(qt)
+	baseToken := bt
+	quoteToken := qt
 	res, err := e.tradeService.GetSortedTrades(baseToken, quoteToken, limit)
 	if err != nil {
 		logger.Error(err)
@@ -89,7 +88,7 @@ func (e *tradeEndpoint) HandleGetTrades(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if !common.IsHexAddress(addr) {
+	if !isValidAddress(addr) {
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid Address")
 		return
 	}
@@ -99,7 +98,7 @@ func (e *tradeEndpoint) HandleGetTrades(w http.ResponseWriter, r *http.Request) 
 		lim, _ = strconv.Atoi(limit)
 	}
 
-	address := common.HexToAddress(addr)
+	address := addr
 	res, err := e.tradeService.GetSortedTradesByUserAddress(address, lim)
 	if err != nil {
 		logger.Error(err)
@@ -140,14 +139,14 @@ func (e *tradeEndpoint) tradeWebsocket(input interface{}, c *ws.Client) {
 	}
 
 	if ev.Type == "SUBSCRIBE" {
-		if (p.BaseToken == common.Address{}) {
-			err := map[string]string{"Message": "Invalid base token"}
+		if p.BaseToken == "" {
+			err := map[string]string{"Message": "Empty base token in trade"}
 			socket.SendErrorMessage(c, err)
 			return
 		}
 
-		if (p.QuoteToken == common.Address{}) {
-			err := map[string]string{"Message": "Invalid quote token"}
+		if p.QuoteToken == "" {
+			err := map[string]string{"Message": "Empty quote token in trade"}
 			socket.SendErrorMessage(c, err)
 			return
 		}

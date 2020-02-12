@@ -24,22 +24,23 @@ package engine
 // Values: serialized order
 
 import (
-	"math/big"
+	"fmt"
+	"math"
+	"strconv"
 	"sync"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/types"
 )
 
 type OrderBook struct {
-	rabbitMQConn *rabbitmq.Connection
-	orderDao     interfaces.OrderDao
-	tradeDao     interfaces.TradeDao
-	pair         *types.Pair
-	mutex        *sync.Mutex
+	rabbitMQConn  *rabbitmq.Connection
+	orderDao      interfaces.OrderDao
+	tradeDao      interfaces.TradeDao
+	pair          *types.Pair
+	mutex         *sync.Mutex
+	obyteProvider interfaces.ObyteProvider
 }
 
 // newOrder calls buyOrder/sellOrder based on type of order recieved and
@@ -76,7 +77,7 @@ func (ob *OrderBook) newOrder(o *types.Order) (err error) {
 }
 
 func (ob *OrderBook) addOrder(o *types.Order) error {
-	if o.FilledAmount == nil || math.IsZero(o.FilledAmount) {
+	if o.FilledAmount == 0 {
 		o.Status = "OPEN"
 	}
 
@@ -96,7 +97,6 @@ func (ob *OrderBook) addOrder(o *types.Order) error {
 // are fetched and trade is executed
 func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 	res := &types.EngineResponse{}
-	remainingOrder := *o
 
 	matchingOrders, err := ob.orderDao.GetMatchingSellOrders(o)
 	if err != nil {
@@ -105,7 +105,7 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 	}
 
 	// case where no order is matched
-	if len(matchingOrders) == 0 {
+	if len(matchingOrders) == 0 || o.MatcherAddress != ob.obyteProvider.GetOperatorAddress() {
 		ob.addOrder(o)
 		res.Status = "ORDER_ADDED"
 		res.Order = o
@@ -121,12 +121,8 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 
 		matches.AppendMatch(mo, trade)
-		remainingOrder.Amount = math.Sub(remainingOrder.Amount, trade.Amount)
 
-		if math.IsZero(remainingOrder.Amount) {
-			o.FilledAmount = o.Amount
-			o.Status = "FILLED"
-
+		if o.Status == "FILLED" {
 			_, err := ob.orderDao.FindAndModify(o.Hash, o)
 			if err != nil {
 				logger.Error(err)
@@ -141,7 +137,6 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 	}
 
 	//TODO refactor
-	o.Status = "PARTIAL_FILLED"
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
 		logger.Error(err)
@@ -160,7 +155,6 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 // are fetched and trade is executed
 func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 	res := &types.EngineResponse{}
-	remainingOrder := *o
 
 	matchingOrders, err := ob.orderDao.GetMatchingBuyOrders(o)
 	if err != nil {
@@ -168,7 +162,7 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 		return nil, err
 	}
 
-	if len(matchingOrders) == 0 {
+	if len(matchingOrders) == 0 || o.MatcherAddress != ob.obyteProvider.GetOperatorAddress() {
 		o.Status = "OPEN"
 		ob.addOrder(o)
 
@@ -186,12 +180,8 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 
 		matches.AppendMatch(mo, trade)
-		remainingOrder.Amount = math.Sub(remainingOrder.Amount, trade.Amount)
 
-		if math.IsZero(remainingOrder.Amount) {
-			o.FilledAmount = o.Amount
-			o.Status = "FILLED"
-
+		if o.Status == "FILLED" {
 			_, err := ob.orderDao.FindAndModify(o.Hash, o)
 			if err != nil {
 				logger.Error(err)
@@ -206,7 +196,6 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 	}
 
 	//TODO refactor
-	o.Status = "PARTIAL_FILLED"
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
 		logger.Error(err)
@@ -224,48 +213,123 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 // with trade instance and fillOrder
 func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (*types.Trade, error) {
 	trade := &types.Trade{}
-	tradeAmount := big.NewInt(0)
+	tradeAmount := int64(0)      // always in base currency
+	tradeQuoteAmount := int64(0) // always in quote currency
 
 	//TODO changes 'strictly greater than' condition. The orders that are almost completely filled
 	//TODO should be removed/skipped
-	if math.IsStrictlyGreaterThan(makerOrder.RemainingAmount(), takerOrder.RemainingAmount()) {
-		tradeAmount = takerOrder.RemainingAmount()
-		makerOrder.FilledAmount = math.Add(makerOrder.FilledAmount, tradeAmount)
-		makerOrder.Status = "PARTIAL_FILLED"
+	if takerOrder.Side == "BUY" {
+		// sell the remaining taker's quote amount at maker's price
+		// takerOutput in base currency
+		takerOutput := round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
+		if makerOrder.RemainingSellAmount > takerOutput {
+			tradeAmount = takerOutput
+			tradeQuoteAmount = takerOrder.RemainingSellAmount
 
-		_, err := ob.orderDao.FindAndModify(makerOrder.Hash, makerOrder)
-		if err != nil {
-			logger.Error(err)
-			return nil, err
+			makerOrder.FilledAmount += tradeAmount
+			makerOrder.RemainingSellAmount -= tradeAmount
+
+			takerOrder.FilledAmount += tradeAmount
+			takerOrder.RemainingSellAmount = 0
+
+			makerOrder.Status = "PARTIAL_FILLED"
+			takerOrder.Status = "FILLED"
+		} else { // maker <= taker
+			tradeAmount = makerOrder.RemainingAmount()
+			tradeQuoteAmount = round(float64(tradeAmount) * toOscriptPrecision(makerOrder.Price))
+
+			makerOrder.FilledAmount += tradeAmount
+			makerOrder.RemainingSellAmount -= tradeAmount
+			if makerOrder.RemainingSellAmount != 0 {
+				panic(fmt.Sprintf("smaller maker seller: remaining sell amount = %d", makerOrder.RemainingSellAmount))
+			}
+
+			takerOrder.FilledAmount += tradeAmount
+			takerOrder.RemainingSellAmount -= tradeQuoteAmount
+
+			makerOrder.Status = "FILLED"
+			if takerOrder.RemainingSellAmount > 0 {
+				takerOrder.Status = "PARTIAL_FILLED"
+			} else if takerOrder.RemainingSellAmount == 0 {
+				takerOrder.Status = "FILLED"
+			} else {
+				panic(fmt.Sprintf("takerOrder.RemainingSellAmount = %d", takerOrder.RemainingSellAmount))
+			}
 		}
-	} else {
-		tradeAmount = makerOrder.RemainingAmount()
-		makerOrder.FilledAmount = makerOrder.Amount
-		makerOrder.Status = "FILLED"
+	} else { // taker is seller
+		makerOutput := round(float64(makerOrder.RemainingSellAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
+		if makerOutput > takerOrder.RemainingAmount() {
+			tradeAmount = takerOrder.RemainingAmount()
+			tradeQuoteAmount = round(float64(tradeAmount) / toOscriptPrecision(makerOrder.OriginalPrice()))
 
-		_, err := ob.orderDao.FindAndModify(makerOrder.Hash, makerOrder)
-		if err != nil {
-			logger.Error(err)
-			return nil, err
+			makerOrder.FilledAmount += tradeAmount
+			makerOrder.RemainingSellAmount -= tradeQuoteAmount
+
+			takerOrder.FilledAmount += tradeAmount
+			takerOrder.RemainingSellAmount -= tradeAmount
+			if takerOrder.RemainingSellAmount != 0 {
+				panic(fmt.Sprintf("smaller taker seller: remaining sell amount = %d", takerOrder.RemainingSellAmount))
+			}
+
+			makerOrder.Status = "PARTIAL_FILLED"
+			takerOrder.Status = "FILLED"
+		} else { // maker <= taker
+			tradeAmount = makerOutput
+			tradeQuoteAmount = makerOrder.RemainingSellAmount
+
+			makerOrder.FilledAmount += tradeAmount
+			makerOrder.RemainingSellAmount = 0
+
+			takerOrder.FilledAmount += tradeAmount
+			takerOrder.RemainingSellAmount -= tradeAmount
+
+			makerOrder.Status = "FILLED"
+			if takerOrder.RemainingSellAmount > 0 {
+				takerOrder.Status = "PARTIAL_FILLED"
+			} else if takerOrder.RemainingSellAmount == 0 {
+				takerOrder.Status = "FILLED"
+			} else {
+				panic(fmt.Sprintf("takerOrder.RemainingSellAmount = %d", takerOrder.RemainingSellAmount))
+			}
 		}
 	}
 
-	takerOrder.FilledAmount = math.Add(takerOrder.FilledAmount, tradeAmount)
+	_, err := ob.orderDao.FindAndModify(makerOrder.Hash, makerOrder)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
 	trade = &types.Trade{
-		Amount:         tradeAmount,
-		PricePoint:     takerOrder.PricePoint,
-		BaseToken:      takerOrder.BaseToken,
-		QuoteToken:     takerOrder.QuoteToken,
-		MakerOrderHash: makerOrder.Hash,
-		TakerOrderHash: takerOrder.Hash,
-		Taker:          takerOrder.UserAddress,
-		PairName:       takerOrder.PairName,
-		Maker:          makerOrder.UserAddress,
-		Status:         "PENDING",
+		Amount:                   tradeAmount,
+		QuoteAmount:              tradeQuoteAmount,
+		Price:                    makerOrder.Price, // maker price!
+		BaseToken:                takerOrder.BaseToken,
+		QuoteToken:               takerOrder.QuoteToken,
+		MakerOrderHash:           makerOrder.Hash,
+		TakerOrderHash:           takerOrder.Hash,
+		Taker:                    takerOrder.UserAddress,
+		PairName:                 takerOrder.PairName,
+		Maker:                    makerOrder.UserAddress,
+		RemainingTakerSellAmount: takerOrder.RemainingSellAmount,
+		RemainingMakerSellAmount: makerOrder.RemainingSellAmount,
+		Status:                   "PENDING",
 	}
 
 	trade.Hash = trade.ComputeHash()
 	return trade, nil
+}
+
+func toOscriptPrecision(x float64) float64 {
+	f, err := strconv.ParseFloat(fmt.Sprintf("%.15g", x), 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func round(x float64) int64 {
+	return int64(math.Round(toOscriptPrecision(x)))
 }
 
 // CancelOrder is used to cancel the order from orderbook
@@ -273,8 +337,10 @@ func (ob *OrderBook) cancelOrder(o *types.Order) error {
 	ob.mutex.Lock()
 	defer ob.mutex.Unlock()
 
-	o.Status = "CANCELLED"
-	err := ob.orderDao.UpdateOrderStatus(o.Hash, "CANCELLED")
+	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" {
+		o.Status = "CANCELLED"
+	}
+	err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -302,16 +368,18 @@ func (ob *OrderBook) invalidateMakerOrders(matches types.Matches) error {
 
 	orders := matches.MakerOrders
 	trades := matches.Trades
-	tradeAmounts := matches.TradeAmounts()
-	makerOrderHashes := []common.Hash{}
-	takerOrderHashes := []common.Hash{}
+	//tradeAmounts := matches.TradeAmounts()
+	makerOrderHashes := []string{}
+	//takerOrderHashes := []string{}
+	tradeAmount := int64(0)
 
 	for i, _ := range orders {
 		makerOrderHashes = append(makerOrderHashes, trades[i].MakerOrderHash)
-		takerOrderHashes = append(takerOrderHashes, trades[i].TakerOrderHash)
+		//takerOrderHashes = append(takerOrderHashes, trades[i].TakerOrderHash)
+		tradeAmount += trades[i].Amount
 	}
 
-	takerOrders, err := ob.orderDao.UpdateOrderFilledAmounts(takerOrderHashes, tradeAmounts)
+	takerOrders, err := ob.orderDao.UpdateOrderFilledAmounts([]string{matches.TakerOrder.Hash}, []int64{tradeAmount})
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -324,7 +392,7 @@ func (ob *OrderBook) invalidateMakerOrders(matches types.Matches) error {
 	}
 
 	//TODO in the case the trades are not in the database they should not be created.
-	cancelledTrades, err := ob.tradeDao.UpdateTradeStatusesByOrderHashes("CANCELLED", takerOrderHashes...)
+	cancelledTrades, err := ob.tradeDao.UpdateTradeStatusesByOrderHashes("CANCELLED", makerOrderHashes...)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -351,7 +419,7 @@ func (ob *OrderBook) invalidateMakerOrders(matches types.Matches) error {
 	return nil
 }
 
-func (ob *OrderBook) invalidateTakerOrders(matches types.Matches) error {
+/*func (ob *OrderBook) invalidateTakerOrders(matches types.Matches) error {
 	ob.mutex.Lock()
 	defer ob.mutex.Unlock()
 
@@ -360,7 +428,7 @@ func (ob *OrderBook) invalidateTakerOrders(matches types.Matches) error {
 	trades := matches.Trades
 	tradeAmounts := matches.TradeAmounts()
 
-	makerOrderHashes := []common.Hash{}
+	makerOrderHashes := []string{}
 	for i, _ := range trades {
 		makerOrderHashes = append(makerOrderHashes, trades[i].MakerOrderHash)
 	}
@@ -403,9 +471,9 @@ func (ob *OrderBook) invalidateTakerOrders(matches types.Matches) error {
 	}
 
 	return nil
-}
+}*/
 
-func (ob *OrderBook) InvalidateOrder(o *types.Order) (*types.EngineResponse, error) {
+/*func (ob *OrderBook) InvalidateOrder(o *types.Order) (*types.EngineResponse, error) {
 	ob.mutex.Lock()
 	defer ob.mutex.Unlock()
 
@@ -423,4 +491,4 @@ func (ob *OrderBook) InvalidateOrder(o *types.Order) (*types.EngineResponse, err
 	}
 
 	return res, nil
-}
+}*/

@@ -3,9 +3,8 @@ package daos
 import (
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/types"
 	mgo "github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -23,7 +22,7 @@ func NewTokenDao() *TokenDao {
 	dbName := app.Config.DBName
 	collection := "tokens"
 	index := mgo.Index{
-		Key:    []string{"address"},
+		Key:    []string{"asset"},
 		Unique: true,
 	}
 
@@ -169,9 +168,9 @@ func (dao *TokenDao) GetByID(id bson.ObjectId) (*types.Token, error) {
 	return res, nil
 }
 
-// GetByAddress function fetches details of a token based on its contract address
-func (dao *TokenDao) GetByAddress(addr common.Address) (*types.Token, error) {
-	q := bson.M{"address": addr.Hex()}
+// GetByAsset function fetches details of a token based on its asset ID
+func (dao *TokenDao) GetByAsset(asset string) (*types.Token, error) {
+	q := bson.M{"asset": asset}
 	var resp []types.Token
 
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 1, &resp)

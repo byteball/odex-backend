@@ -2,27 +2,22 @@ package types
 
 import (
 	"encoding/json"
-	"math/big"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/globalsign/mgo/bson"
-	"github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation"
 )
 
 // Token struct is used to model the token data in the system and DB
 type Token struct {
-	ID       bson.ObjectId  `json:"-" bson:"_id"`
-	Symbol   string         `json:"symbol" bson:"symbol"`
-	Address  common.Address `json:"address" bson:"address"`
-	Decimals int            `json:"decimals" bson:"decimals"`
-	Active   bool           `json:"active" bson:"active"`
-	Listed   bool           `json:"listed" bson:"listed"`
-	Quote    bool           `json:"quote" bson:"quote"`
-	MakeFee  *big.Int       `json:"makeFee,omitempty" bson:"makeFee,omitempty"`
-	TakeFee  *big.Int       `json:"takeFee,omitempty" bson:"makeFee,omitempty"`
-	Rank     int            `json:"rank,omitempty" bson:"rank,omitempty"`
+	ID       bson.ObjectId `json:"-" bson:"_id"`
+	Symbol   string        `json:"symbol" bson:"symbol"`
+	Asset    string        `json:"asset" bson:"asset"`
+	Decimals int           `json:"decimals" bson:"decimals"`
+	Active   bool          `json:"active" bson:"active"`
+	Listed   bool          `json:"listed" bson:"listed"`
+	Quote    bool          `json:"quote" bson:"quote"`
+	Rank     int           `json:"rank,omitempty" bson:"rank,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
@@ -32,13 +27,11 @@ type Token struct {
 type TokenRecord struct {
 	ID       bson.ObjectId `json:"-" bson:"_id"`
 	Symbol   string        `json:"symbol" bson:"symbol"`
-	Address  string        `json:"address" bson:"address"`
+	Asset    string        `json:"asset" bson:"asset"`
 	Decimals int           `json:"decimals" bson:"decimals"`
 	Active   bool          `json:"active" bson:"active"`
 	Listed   bool          `json:"listed" bson:"listed"`
 	Quote    bool          `json:"quote" bson:"quote"`
-	MakeFee  string        `json:"makeFee,omitempty" bson:"makeFee,omitempty"`
-	TakeFee  string        `json:"takeFee,omitempty" bson:"takeFee,omitempty"`
 	Rank     int           `json:"rank,omitempty" bson:"rank,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
@@ -50,7 +43,7 @@ type TokenRecord struct {
 func (t Token) Validate() error {
 	return validation.ValidateStruct(&t,
 		validation.Field(&t.Symbol, validation.Required),
-		validation.Field(&t.Address, validation.Required),
+		validation.Field(&t.Asset, validation.Required),
 	)
 }
 
@@ -58,7 +51,7 @@ func (t *Token) MarshalJSON() ([]byte, error) {
 	token := map[string]interface{}{
 		"id":        t.ID,
 		"symbol":    t.Symbol,
-		"address":   t.Address.Hex(),
+		"asset":     t.Asset,
 		"decimals":  t.Decimals,
 		"active":    t.Active,
 		"listed":    t.Listed,
@@ -66,14 +59,6 @@ func (t *Token) MarshalJSON() ([]byte, error) {
 		"createdAt": t.CreatedAt.Format(time.RFC3339Nano),
 		"updatedAt": t.UpdatedAt.Format(time.RFC3339Nano),
 		"rank":      t.Rank,
-	}
-
-	if t.MakeFee != nil {
-		token["makeFee"] = t.MakeFee.String()
-	}
-
-	if t.TakeFee != nil {
-		token["takeFee"] = t.TakeFee.String()
 	}
 
 	return json.Marshal(token)
@@ -87,8 +72,8 @@ func (t *Token) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if token["address"] != nil {
-		t.Address = common.HexToAddress(token["address"].(string))
+	if token["asset"] != nil {
+		t.Asset = token["asset"].(string)
 	}
 
 	if token["listed"] != nil {
@@ -104,14 +89,14 @@ func (t *Token) UnmarshalJSON(b []byte) error {
 	}
 
 	if token["decimals"] != nil {
-		t.Decimals = token["decimals"].(int)
+		t.Decimals = int(token["decimals"].(float64))
 	}
 
 	if token["symbol"] != nil {
 		t.Symbol = token["symbol"].(string)
 	}
 
-	if token["id"] != nil {
+	if token["id"] != nil && token["id"].(string) != "" {
 		t.ID = bson.ObjectIdHex(token["id"].(string))
 	}
 
@@ -125,16 +110,8 @@ func (t *Token) UnmarshalJSON(b []byte) error {
 		t.UpdatedAt = tm
 	}
 
-	if token["makeFee"] != nil {
-		t.MakeFee = math.ToBigInt(token["makeFee"].(string))
-	}
-
-	if token["takeFee"] != nil {
-		t.TakeFee = math.ToBigInt(token["takeFee"].(string))
-	}
-
 	if token["rank"] != nil {
-		t.Rank = token["rank"].(int)
+		t.Rank = int(token["rank"].(float64))
 	}
 
 	return nil
@@ -145,7 +122,7 @@ func (t *Token) GetBSON() (interface{}, error) {
 	tr := TokenRecord{
 		ID:        t.ID,
 		Symbol:    t.Symbol,
-		Address:   t.Address.Hex(),
+		Asset:     t.Asset,
 		Decimals:  t.Decimals,
 		Active:    t.Active,
 		Listed:    t.Listed,
@@ -153,14 +130,6 @@ func (t *Token) GetBSON() (interface{}, error) {
 		Rank:      t.Rank,
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
-	}
-
-	if t.MakeFee != nil {
-		tr.MakeFee = t.MakeFee.String()
-	}
-
-	if t.TakeFee != nil {
-		tr.TakeFee = t.TakeFee.String()
 	}
 
 	return tr, nil
@@ -177,8 +146,8 @@ func (t *Token) SetBSON(raw bson.Raw) error {
 
 	t.ID = decoded.ID
 	t.Symbol = decoded.Symbol
-	if common.IsHexAddress(decoded.Address) {
-		t.Address = common.HexToAddress(decoded.Address)
+	if decoded.Asset != "" {
+		t.Asset = decoded.Asset
 	}
 
 	t.Decimals = decoded.Decimals
@@ -188,14 +157,6 @@ func (t *Token) SetBSON(raw bson.Raw) error {
 	t.CreatedAt = decoded.CreatedAt
 	t.UpdatedAt = decoded.UpdatedAt
 	t.Rank = decoded.Rank
-
-	if decoded.MakeFee != "" {
-		t.MakeFee = math.ToBigInt(decoded.MakeFee)
-	}
-
-	if decoded.TakeFee != "" {
-		t.TakeFee = math.ToBigInt(decoded.TakeFee)
-	}
 
 	return nil
 }

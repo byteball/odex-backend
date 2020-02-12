@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/types"
 	"github.com/gorilla/websocket"
 )
 
@@ -71,7 +71,7 @@ func readHandler(c *Client) {
 		msg := types.WebsocketMessage{}
 		if err := json.Unmarshal(payload, &msg); err != nil {
 			logger.Error(err)
-			c.SendMessage(msg.Channel, "ERROR", err.Error())
+			go c.SendMessage(msg.Channel, "ERROR", err.Error())
 			return
 		}
 
@@ -79,7 +79,7 @@ func readHandler(c *Client) {
 		logger.Infof("%v", msg.String())
 
 		if socketChannels[msg.Channel] == nil {
-			c.SendMessage(msg.Channel, "ERROR", "INVALID_CHANNEL")
+			go c.SendMessage(msg.Channel, "ERROR", "INVALID_CHANNEL")
 			return
 		}
 

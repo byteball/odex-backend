@@ -3,9 +3,8 @@ package daos
 import (
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/types"
 	mgo "github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -27,7 +26,7 @@ func PairDaoDBOption(dbName string) func(dao *PairDao) error {
 	}
 }
 
-// NewPairDao returns a new instance of AddressDao
+// NewPairDao returns a new instance of PairDao
 func NewPairDao(options ...PairDaoOption) *PairDao {
 	dao := &PairDao{}
 	dao.collectionName = "pairs"
@@ -41,7 +40,7 @@ func NewPairDao(options ...PairDaoOption) *PairDao {
 	}
 
 	index := mgo.Index{
-		Key:    []string{"baseTokenAddress", "quoteTokenAddress"},
+		Key:    []string{"baseAsset", "quoteAsset"},
 		Unique: true,
 	}
 
@@ -194,14 +193,14 @@ func (dao *PairDao) GetByTokenSymbols(baseTokenSymbol, quoteTokenSymbol string) 
 	return res[0], nil
 }
 
-// GetByTokenAddress function fetches pair based on
-// CONTRACT ADDRESS of base token and quote token
-func (dao *PairDao) GetByTokenAddress(baseToken, quoteToken common.Address) (*types.Pair, error) {
+// GetByAsset function fetches pair based on
+// asset IDs of base token and quote token
+func (dao *PairDao) GetByAsset(baseToken, quoteToken string) (*types.Pair, error) {
 	var res []*types.Pair
 
 	q := bson.M{
-		"baseTokenAddress":  baseToken.Hex(),
-		"quoteTokenAddress": quoteToken.Hex(),
+		"baseAsset":  baseToken,
+		"quoteAsset": quoteToken,
 	}
 
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 1, &res)

@@ -1,17 +1,15 @@
 package daos
 
 import (
-	"math/big"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/types"
 	mgo "github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
 
-// BalanceDao contains:
+// AccountDao contains:
 // collectionName: MongoDB collection name
 // dbName: name of mongodb to interact with
 type AccountDao struct {
@@ -19,13 +17,13 @@ type AccountDao struct {
 	dbName         string
 }
 
-// NewBalanceDao returns a new instance of AddressDao
+// NewAccountDao returns a new instance of AccountDao
 func NewAccountDao() *AccountDao {
 	dbName := app.Config.DBName
 	collection := "accounts"
 	index := mgo.Index{
-		Key: []string{"address"},
-		// Unique: true,
+		Key:    []string{"address"},
+		Unique: true,
 	}
 
 	err := db.Session.DB(dbName).C(collection).EnsureIndex(index)
@@ -51,13 +49,13 @@ func (dao *AccountDao) Create(a *types.Account) error {
 	return nil
 }
 
-func (dao *AccountDao) FindOrCreate(addr common.Address) (*types.Account, error) {
+func (dao *AccountDao) FindOrCreate(addr string) (*types.Account, error) {
 	a := &types.Account{Address: addr}
-	query := bson.M{"address": addr.Hex()}
+	query := bson.M{"address": addr}
 	updated := &types.Account{}
 
 	change := mgo.Change{
-		Update:    types.AccountBSONUpdate{a},
+		Update:    types.AccountBSONUpdate{Account: a},
 		Upsert:    true,
 		Remove:    false,
 		ReturnNew: true,
@@ -90,9 +88,9 @@ func (dao *AccountDao) GetByID(id bson.ObjectId) (*types.Account, error) {
 	return &res[0], nil
 }
 
-func (dao *AccountDao) GetByAddress(owner common.Address) (*types.Account, error) {
+func (dao *AccountDao) GetByAddress(owner string) (*types.Account, error) {
 	res := []types.Account{}
-	q := bson.M{"address": owner.Hex()}
+	q := bson.M{"address": owner}
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 1, &res)
 	if err != nil {
 		logger.Error(err)
@@ -106,8 +104,8 @@ func (dao *AccountDao) GetByAddress(owner common.Address) (*types.Account, error
 	return &res[0], nil
 }
 
-func (dao *AccountDao) GetTokenBalances(owner common.Address) (map[common.Address]*types.TokenBalance, error) {
-	q := bson.M{"address": owner.Hex()}
+func (dao *AccountDao) GetTokenBalances(owner string) (map[string]*types.TokenBalance, error) {
+	q := bson.M{"address": owner}
 	res := []types.Account{}
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 1, &res)
 	if err != nil {
@@ -122,11 +120,11 @@ func (dao *AccountDao) GetTokenBalances(owner common.Address) (map[common.Addres
 	return res[0].TokenBalances, nil
 }
 
-func (dao *AccountDao) GetTokenBalance(owner common.Address, token common.Address) (*types.TokenBalance, error) {
+func (dao *AccountDao) GetTokenBalance(owner string, token string) (*types.TokenBalance, error) {
 	q := []bson.M{
 		bson.M{
 			"$match": bson.M{
-				"address": owner.Hex(),
+				"address": owner,
 			},
 		},
 		bson.M{
@@ -144,7 +142,7 @@ func (dao *AccountDao) GetTokenBalance(owner common.Address, token common.Addres
 						"input": "$tokenBalances",
 						"as":    "kv",
 						"cond": bson.M{
-							"$eq": []interface{}{"$$kv.k", token.Hex()},
+							"$eq": []interface{}{"$$kv.k", token},
 						},
 					},
 				},
@@ -172,17 +170,16 @@ func (dao *AccountDao) GetTokenBalance(owner common.Address, token common.Addres
 	return res[0].TokenBalances[token], nil
 }
 
-func (dao *AccountDao) UpdateTokenBalance(owner, token common.Address, tokenBalance *types.TokenBalance) error {
+func (dao *AccountDao) UpdateTokenBalance(owner, token string, tokenBalance *types.TokenBalance) error {
 	q := bson.M{
-		"address": owner.Hex(),
+		"address": owner,
 	}
 
 	updateQuery := bson.M{
 		"$set": bson.M{
-			"tokenBalances." + token.Hex() + ".balance":        tokenBalance.Balance.String(),
-			"tokenBalances." + token.Hex() + ".allowance":      tokenBalance.Allowance.String(),
-			"tokenBalances." + token.Hex() + ".lockedBalance":  tokenBalance.LockedBalance.String(),
-			"tokenBalances." + token.Hex() + ".pendingBalance": tokenBalance.PendingBalance.String(),
+			"tokenBalances." + token + ".balance":        tokenBalance.Balance,
+			"tokenBalances." + token + ".lockedBalance":  tokenBalance.LockedBalance,
+			"tokenBalances." + token + ".pendingBalance": tokenBalance.PendingBalance,
 		},
 	}
 
@@ -190,25 +187,12 @@ func (dao *AccountDao) UpdateTokenBalance(owner, token common.Address, tokenBala
 	return err
 }
 
-func (dao *AccountDao) UpdateBalance(owner common.Address, token common.Address, balance *big.Int) error {
+func (dao *AccountDao) UpdateBalance(owner string, token string, balance int64) error {
 	q := bson.M{
-		"address": owner.Hex(),
+		"address": owner,
 	}
 	updateQuery := bson.M{
-		"$set": bson.M{"tokenBalances." + token.Hex() + ".balance": balance.String()},
-	}
-
-	err := db.Update(dao.dbName, dao.collectionName, q, updateQuery)
-	return err
-}
-
-func (dao *AccountDao) UpdateAllowance(owner common.Address, token common.Address, allowance *big.Int) error {
-	q := bson.M{
-		"address": owner.Hex(),
-	}
-
-	updateQuery := bson.M{
-		"$set": bson.M{"tokenBalances." + token.Hex() + ".allowance": allowance.String()},
+		"$set": bson.M{"tokenBalances." + token + ".balance": balance},
 	}
 
 	err := db.Update(dao.dbName, dao.collectionName, q, updateQuery)

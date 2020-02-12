@@ -112,14 +112,14 @@ func (s *RawOrderBookSocket) BroadcastMessage(channelID string, p interface{}) e
 
 // SendInitMessage sends INIT message on orderbookchannel on subscription event
 func (s *RawOrderBookSocket) SendInitMessage(c *Client, data interface{}) {
-	c.SendMessage(RawOrderBookChannel, "INIT", data)
+	go c.SendMessage(RawOrderBookChannel, "INIT", data)
 }
 
 // SendUpdateMessage sends UPDATE message on orderbookchannel as new data is created
 func (s *RawOrderBookSocket) SendUpdateMessage(c *Client, data interface{}) {
-	c.SendMessage(RawOrderBookChannel, "UPDATE", data)
+	go c.SendMessage(RawOrderBookChannel, "UPDATE", data)
 }
 
 func (s *RawOrderBookSocket) SendErrorMessage(c *Client, data interface{}) {
-	c.SendMessage(RawOrderBookChannel, "ERROR", data)
+	go c.SendMessage(RawOrderBookChannel, "ERROR", data)
 }

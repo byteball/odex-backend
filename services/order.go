@@ -4,18 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
+	"math"
+	"strings"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/spf13/cast"
+
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/utils"
+	"github.com/byteball/odex-backend/ws"
 
 	"github.com/globalsign/mgo/bson"
 
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/types"
 )
 
 // OrderService
@@ -61,29 +62,29 @@ func (s *OrderService) GetByID(id bson.ObjectId) (*types.Order, error) {
 }
 
 // GetByUserAddress fetches all the orders placed by passed user address
-func (s *OrderService) GetByUserAddress(addr common.Address, limit ...int) ([]*types.Order, error) {
+func (s *OrderService) GetByUserAddress(addr string, limit ...int) ([]*types.Order, error) {
 	return s.orderDao.GetByUserAddress(addr, limit...)
 }
 
 // GetByHash fetches all trades corresponding to a trade hash
-func (s *OrderService) GetByHash(hash common.Hash) (*types.Order, error) {
+func (s *OrderService) GetByHash(hash string) (*types.Order, error) {
 	return s.orderDao.GetByHash(hash)
 }
 
-func (s *OrderService) GetByHashes(hashes []common.Hash) ([]*types.Order, error) {
+func (s *OrderService) GetByHashes(hashes []string) ([]*types.Order, error) {
 	return s.orderDao.GetByHashes(hashes)
 }
 
 // GetCurrentByUserAddress function fetches list of open/partial orders from order collection based on user address.
 // Returns array of Order type struct
-func (s *OrderService) GetCurrentByUserAddress(addr common.Address, limit ...int) ([]*types.Order, error) {
+func (s *OrderService) GetCurrentByUserAddress(addr string, limit ...int) ([]*types.Order, error) {
 	return s.orderDao.GetCurrentByUserAddress(addr, limit...)
 }
 
 // GetHistoryByUserAddress function fetches list of orders which are not in open/partial order status
 // from order collection based on user address.
 // Returns array of Order type struct
-func (s *OrderService) GetHistoryByUserAddress(addr common.Address, limit ...int) ([]*types.Order, error) {
+func (s *OrderService) GetHistoryByUserAddress(addr string, limit ...int) ([]*types.Order, error) {
 	return s.orderDao.GetHistoryByUserAddress(addr, limit...)
 }
 
@@ -97,28 +98,34 @@ func (s *OrderService) NewOrder(o *types.Order) error {
 		return err
 	}
 
-	ok, err := o.VerifySignature()
-	if err != nil {
+	if err := s.validator.ValidateOperatorAddress(o); err != nil {
 		logger.Error(err)
+		return err
 	}
 
-	if !ok {
-		return errors.New("Invalid Signature")
-	}
-
-	p, err := s.pairDao.GetByTokenAddress(o.BaseToken, o.QuoteToken)
+	/*id, err := s.validator.VerifySignature(o)
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
+	o.Hash = id*/
+
+	logger.Info("GetByAsset", o.BaseToken, o.QuoteToken)
+	p, err := s.pairDao.GetByAsset(o.BaseToken, o.QuoteToken)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	logger.Info("pair", p)
 
 	if p == nil {
 		return errors.New("Pair not found")
 	}
 
-	if math.IsStrictlySmallerThan(o.QuoteAmount(p), p.MinQuoteAmount()) {
-		return errors.New("Order amount too low")
-	}
+	//if o.QuoteAmount(p) < p.MinQuoteAmount() {
+	//	return errors.New("Order amount too low")
+	//}
+	//logger.Info("126")
 
 	// Fill token and pair data
 	err = o.Process(p)
@@ -126,6 +133,7 @@ func (s *OrderService) NewOrder(o *types.Order) error {
 		logger.Error(err)
 		return err
 	}
+	//logger.Info("filled pair", o.Pair)
 
 	err = s.validator.ValidateAvailableBalance(o)
 	if err != nil {
@@ -152,14 +160,11 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 		return err
 	}
 
-	ok, err := oc.VerifySignature(o)
+	/*_, err = s.validator.VerifyCancelSignature(oc)
 	if err != nil {
 		logger.Error(err)
-	}
-
-	if !ok {
-		return errors.New("Invalid signature")
-	}
+		return err
+	}*/
 
 	if o == nil {
 		return errors.New("No order with corresponding hash")
@@ -178,8 +183,92 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 	return nil
 }
 
+func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string, error) {
+	/*addr, err := s.validator.VerifyCancelSignature(oc)
+	if err != nil {
+		logger.Error(err)
+		return "", err
+	}*/
+	o, err := s.orderDao.GetByHash(oc.OrderHash)
+
+	if err == nil && o == nil {
+		err = errors.New("failed to find the order to be cancelled")
+	}
+
+	if err != nil {
+		logger.Error(err)
+		return "", "", err
+	}
+
+	authors := cast.ToSlice(o.OriginalOrder["authors"])
+	author := cast.ToStringMapString(authors[0])
+	signer := author["address"]
+
+	return o.UserAddress, signer, nil
+}
+
+func (s *OrderService) CheckIfBalancesAreSufficientAndCancel(address string, balances map[string]int64) {
+	for token, balance := range balances {
+		s.checkIfBalanceIsSufficientAndCancel(address, token, balance)
+	}
+}
+
+func (s *OrderService) checkIfBalanceIsSufficientAndCancel(address string, token string, balance int64) {
+	lockedBalance, err := s.orderDao.GetUserLockedBalance(address, token)
+	if err != nil {
+		panic(err)
+	}
+	if lockedBalance <= balance {
+		return
+	}
+	orders, err := s.orderDao.GetCurrentByUserAddress(address)
+	if err != nil {
+		panic(err)
+	}
+	bCancelAll := (token == "base" && balance < int64(len(orders)*1000)) // not enough for fees
+	for _, order := range orders {
+		if !bCancelAll {
+			var soldToken string
+			if order.Side == "SELL" {
+				soldToken = order.BaseToken
+			} else {
+				soldToken = order.QuoteToken
+			}
+			if soldToken != token {
+				continue
+			}
+		}
+		order.Status = "AUTO_CANCELLED"
+		err = s.broker.PublishCancelOrderMessage(order)
+		if err != nil {
+			panic(err)
+		}
+		if !bCancelAll {
+			lockedBalance -= order.RemainingSellAmount
+			if lockedBalance <= balance { // enough orders cancelled
+				return
+			}
+		}
+	}
+}
+
+func (s *OrderService) CancelOrdersSignedByRevokedSigner(address string, signer string) {
+	orders, err := s.orderDao.GetCurrentByUserAddressAndSignerAddress(address, signer)
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("will cancel", len(orders), "orders due to revocation of authorization on", address, "from signer", signer)
+	for _, order := range orders {
+		order.Status = "AUTO_CANCELLED"
+		err = s.broker.PublishCancelOrderMessage(order)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func (s *OrderService) handleOrderCancelled(res *types.EngineResponse) {
-	ws.SendOrderMessage("ORDER_CANCELLED", res.Order.UserAddress, res.Order)
+	go ws.SendOrderMessage("ORDER_CANCELLED", res.Order.UserAddress, res.Order)
 	s.broadcastOrderBookUpdate([]*types.Order{res.Order})
 	s.broadcastRawOrderBookUpdate([]*types.Order{res.Order})
 	return
@@ -218,8 +307,8 @@ func (s *OrderService) HandleOperatorMessages(msg *types.OperatorMessage) error 
 		s.handleOperatorTradeTxSuccess(msg)
 	case "TRADE_TX_ERROR":
 		s.handleOperatorTradeTxError(msg)
-	case "TRADE_INVALID":
-		s.handleOperatorTradeInvalid(msg)
+	//case "TRADE_INVALID":
+	//	s.handleOperatorTradeInvalid(msg)
 	default:
 		s.handleOperatorUnknownMessage(msg)
 	}
@@ -232,7 +321,7 @@ func (s *OrderService) handleOrdersInvalidated(res *types.EngineResponse) error 
 	trades := res.CancelledTrades
 
 	for _, o := range *orders {
-		ws.SendOrderMessage("ORDER_INVALIDATED", o.UserAddress, o)
+		go ws.SendOrderMessage("ORDER_INVALIDATED", o.UserAddress, o)
 	}
 
 	if orders != nil && len(*orders) != 0 {
@@ -253,21 +342,20 @@ func (s *OrderService) handleOrdersInvalidated(res *types.EngineResponse) error 
 // handleEngineError returns an websocket error message to the client
 func (s *OrderService) handleEngineError(res *types.EngineResponse) {
 	o := res.Order
-	ws.SendOrderMessage("ERROR", o.UserAddress, nil)
+	go ws.SendOrderMessage("ERROR", o.UserAddress, nil)
 }
 
 // handleEngineOrderAdded returns a websocket message informing the client that his order has been added
 // to the orderbook (but currently not matched)
 func (s *OrderService) handleEngineOrderAdded(res *types.EngineResponse) {
 	o := res.Order
-	ws.SendOrderMessage("ORDER_ADDED", o.UserAddress, o)
+	go ws.SendOrderMessage("ORDER_ADDED", o.UserAddress, o)
 
 	s.broadcastOrderBookUpdate([]*types.Order{o})
 	s.broadcastRawOrderBookUpdate([]*types.Order{o})
 }
 
 // handleEngineOrderMatched returns a websocket message informing the client that his order has been added.
-// The request signature message also signals the client to sign trades.
 func (s *OrderService) handleEngineOrderMatched(res *types.EngineResponse) {
 	o := res.Order //res.Order is the "taker" order
 	taker := o.UserAddress
@@ -279,7 +367,8 @@ func (s *OrderService) handleEngineOrderMatched(res *types.EngineResponse) {
 
 	//res.Matches is an array of (order, trade) pairs where each order is an "maker" order that is being matched
 	for i, _ := range matches.Trades {
-		err := s.validator.ValidateBalance(matches.MakerOrders[i])
+		//err := s.validator.ValidateBalance(matches.MakerOrders[i])
+		var err error
 		if err != nil {
 			logger.Error(err)
 			invalidMatches.AppendMatch(matches.MakerOrders[i], matches.Trades[i])
@@ -290,31 +379,31 @@ func (s *OrderService) handleEngineOrderMatched(res *types.EngineResponse) {
 		}
 	}
 
-	// if there are any invalid matches, the maker orders are at cause (since maker orders have been validated in the
+	// if there are any invalid matches, the maker orders are at cause (since taker orders have been validated in the
 	// newOrder() function. We remove the maker orders from the orderbook)
-	if invalidMatches.Length() > 0 {
+	/*if invalidMatches.Length() > 0 {
 		err := s.broker.PublishInvalidateMakerOrdersMessage(invalidMatches)
 		if err != nil {
 			logger.Error(err)
 		}
-	}
+	}*/
 
 	if validMatches.Length() > 0 {
 		err := s.tradeDao.Create(validMatches.Trades...)
 		if err != nil {
 			logger.Error(err)
-			ws.SendOrderMessage("ERROR", taker, err)
+			go ws.SendOrderMessage("ERROR", taker, err)
 			return
 		}
 
 		err = s.broker.PublishTrades(&validMatches)
 		if err != nil {
 			logger.Error(err)
-			ws.SendOrderMessage("ERROR", taker, err)
+			go ws.SendOrderMessage("ERROR", taker, err)
 			return
 		}
 
-		ws.SendOrderMessage("ORDER_MATCHED", taker, types.OrderMatchedPayload{&matches})
+		ws.SendOrderMessage("ORDER_MATCHED", taker, types.OrderMatchedPayload{Matches: &matches})
 	}
 
 	// we only update the orderbook with the current set of orders if there are no invalid matches.
@@ -336,7 +425,7 @@ func (s *OrderService) handleOperatorUnknownMessage(msg *types.OperatorMessage) 
 	utils.PrintJSON(msg)
 }
 
-// handleOperatorTradeTxPending notifies clients a trade tx was successfully sent to the Ethereum chain
+// handleOperatorTradeTxPending notifies clients a trade tx was successfully sent to the Obyte chain
 // and is currently pending
 func (s *OrderService) handleOperatorTradeTxPending(msg *types.OperatorMessage) {
 	matches := msg.Matches
@@ -344,11 +433,11 @@ func (s *OrderService) handleOperatorTradeTxPending(msg *types.OperatorMessage) 
 	orders := matches.MakerOrders
 
 	taker := trades[0].Taker
-	ws.SendOrderMessage("ORDER_PENDING", taker, types.OrderPendingPayload{matches})
+	go ws.SendOrderMessage("ORDER_PENDING", taker, types.OrderPendingPayload{Matches: matches})
 
 	for _, o := range orders {
 		maker := o.UserAddress
-		ws.SendOrderMessage("ORDER_PENDING", maker, types.OrderPendingPayload{matches})
+		go ws.SendOrderMessage("ORDER_PENDING", maker, types.OrderPendingPayload{Matches: matches})
 	}
 
 	s.broadcastTradeUpdate(trades)
@@ -358,7 +447,7 @@ func (s *OrderService) handleOperatorTradeTxPending(msg *types.OperatorMessage) 
 // the trade status in the database and
 func (s *OrderService) handleOperatorTradeTxSuccess(msg *types.OperatorMessage) {
 	matches := msg.Matches
-	hashes := []common.Hash{}
+	hashes := []string{}
 	trades := matches.Trades
 
 	for _, t := range trades {
@@ -376,13 +465,13 @@ func (s *OrderService) handleOperatorTradeTxSuccess(msg *types.OperatorMessage) 
 
 	// Send ORDER_SUCCESS message to order takers
 	taker := trades[0].Taker
-	ws.SendOrderMessage("ORDER_SUCCESS", taker, types.OrderSuccessPayload{matches})
+	go ws.SendOrderMessage("ORDER_SUCCESS", taker, types.OrderSuccessPayload{Matches: matches})
 
 	// Send ORDER_SUCCESS message to order makers
 	for i, _ := range trades {
 		match := matches.NthMatch(i)
 		maker := match.MakerOrders[0].UserAddress
-		ws.SendOrderMessage("ORDER_SUCCESS", maker, types.OrderSuccessPayload{match})
+		go ws.SendOrderMessage("ORDER_SUCCESS", maker, types.OrderSuccessPayload{Matches: match})
 	}
 
 	s.broadcastTradeUpdate(trades)
@@ -400,7 +489,7 @@ func (s *OrderService) handleOperatorTradeTxError(msg *types.OperatorMessage) {
 	}
 
 	for _, t := range trades {
-		err := s.tradeDao.UpdateTradeStatus(t.Hash, "ERROR")
+		err := s.tradeDao.UpdateTradeStatus(t.Hash, "REJECTED")
 		if err != nil {
 			logger.Error(err)
 		}
@@ -409,11 +498,19 @@ func (s *OrderService) handleOperatorTradeTxError(msg *types.OperatorMessage) {
 	}
 
 	taker := trades[0].Taker
-	ws.SendOrderMessage("ORDER_ERROR", taker, matches)
+	go ws.SendOrderMessage("ORDER_ERROR", taker, matches.TakerOrder)
+	// cancel the remaining order, if any
+	if matches.TakerOrder.Status == "PARTIAL_FILLED" {
+		s.orderDao.UpdateOrderStatus(taker, "AUTO_CANCELLED")
+	}
 
 	for _, o := range orders {
 		maker := o.UserAddress
-		ws.SendOrderMessage("ORDER_ERROR", maker, o)
+		go ws.SendOrderMessage("ORDER_ERROR", maker, o)
+		// cancel the remaining order, if any
+		if o.Status == "PARTIAL_FILLED" {
+			s.orderDao.UpdateOrderStatus(maker, "AUTO_CANCELLED")
+		}
 	}
 
 	s.broadcastTradeUpdate(trades)
@@ -441,11 +538,11 @@ func (s *OrderService) handleOperatorTradeError(msg *types.OperatorMessage) {
 	}
 
 	taker := trades[0].Taker
-	ws.SendOrderMessage("ORDER_ERROR", taker, matches)
+	go ws.SendOrderMessage("ORDER_ERROR", taker, matches.TakerOrder)
 
 	for _, o := range orders {
 		maker := o.UserAddress
-		ws.SendOrderMessage("ORDER_ERROR", maker, o)
+		go ws.SendOrderMessage("ORDER_ERROR", maker, o)
 	}
 
 	s.broadcastTradeUpdate(trades)
@@ -455,7 +552,7 @@ func (s *OrderService) handleOperatorTradeError(msg *types.OperatorMessage) {
 // which can be the case for example if one of the account addresses does suddendly
 // not have enough tokens to satisfy the order. Ultimately, the goal would be to
 // reinclude the non-invalid orders in the orderbook
-func (s *OrderService) handleOperatorTradeInvalid(msg *types.OperatorMessage) {
+/*func (s *OrderService) handleOperatorTradeInvalid(msg *types.OperatorMessage) {
 	matches := msg.Matches
 	trades := matches.Trades
 	orders := matches.MakerOrders
@@ -475,19 +572,19 @@ func (s *OrderService) handleOperatorTradeInvalid(msg *types.OperatorMessage) {
 	}
 
 	taker := trades[0].Taker
-	ws.SendOrderMessage("ORDER_ERROR", taker, matches)
+	go ws.SendOrderMessage("ORDER_ERROR", taker, matches.TakerOrder)
 
 	for _, o := range orders {
 		maker := o.UserAddress
-		ws.SendOrderMessage("ORDER_ERROR", maker, o)
+		go ws.SendOrderMessage("ORDER_ERROR", maker, o)
 	}
 
 	s.broadcastTradeUpdate(trades)
-}
+}*/
 
 func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
-	bids := []map[string]string{}
-	asks := []map[string]string{}
+	bids := []map[string]interface{}{}
+	asks := []map[string]interface{}{}
 
 	p, err := orders[0].Pair()
 	if err != nil {
@@ -496,22 +593,23 @@ func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
 	}
 
 	for _, o := range orders {
-		pp := o.PricePoint
+		pp := o.Price
 		side := o.Side
 
-		amount, err := s.orderDao.GetOrderBookPricePoint(p, pp, side)
+		amount, matcherAddress, err := s.orderDao.GetOrderBookPrice(p, pp, side)
 		if err != nil {
 			logger.Error(err)
 		}
 
 		// case where the amount at the pricepoint is equal to 0
-		if amount == nil {
-			amount = big.NewInt(0)
+		if amount == 0 {
+			amount = 0
 		}
 
-		update := map[string]string{
-			"pricepoint": pp.String(),
-			"amount":     amount.String(),
+		update := map[string]interface{}{
+			"price":          pp,
+			"amount":         amount,
+			"matcherAddress": matcherAddress,
 		}
 
 		if side == "BUY" {
@@ -521,8 +619,9 @@ func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
 		}
 	}
 
-	id := utils.GetOrderBookChannelID(p.BaseTokenAddress, p.QuoteTokenAddress)
-	ws.GetOrderBookSocket().BroadcastMessage(id, map[string]interface{}{
+	logger.Info("broadcastOrderBookUpdate", bids, asks)
+	id := utils.GetOrderBookChannelID(p.BaseAsset, p.QuoteAsset)
+	go ws.GetOrderBookSocket().BroadcastMessage(id, map[string]interface{}{
 		"pairName": orders[0].PairName,
 		"bids":     bids,
 		"asks":     asks,
@@ -536,8 +635,8 @@ func (s *OrderService) broadcastRawOrderBookUpdate(orders []*types.Order) {
 		return
 	}
 
-	id := utils.GetOrderBookChannelID(p.BaseTokenAddress, p.QuoteTokenAddress)
-	ws.GetRawOrderBookSocket().BroadcastMessage(id, orders)
+	id := utils.GetOrderBookChannelID(p.BaseAsset, p.QuoteAsset)
+	go ws.GetRawOrderBookSocket().BroadcastMessage(id, orders)
 }
 
 func (s *OrderService) broadcastTradeUpdate(trades []*types.Trade) {
@@ -547,6 +646,50 @@ func (s *OrderService) broadcastTradeUpdate(trades []*types.Trade) {
 		return
 	}
 
-	id := utils.GetTradeChannelID(p.BaseTokenAddress, p.QuoteTokenAddress)
-	ws.GetTradeSocket().BroadcastMessage(id, trades)
+	id := utils.GetTradeChannelID(p.BaseAsset, p.QuoteAsset)
+	go ws.GetTradeSocket().BroadcastMessage(id, trades)
+}
+
+func (s *OrderService) AdjustBalancesForUncommittedTrades(address string, balances map[string]int64) map[string]int64 {
+	//logger.Info("balances in:", balances)
+	trades := s.tradeDao.GetUncommittedTradesByUserAddress(address)
+
+	for _, t := range trades {
+		baseSymbol := t.PairName[:strings.IndexByte(t.PairName, '/')]
+		quoteSymbol := t.PairName[strings.IndexByte(t.PairName, '/')+1:]
+		var myOrderHash string
+		if t.Taker == address {
+			myOrderHash = t.TakerOrderHash
+		} else {
+			myOrderHash = t.MakerOrderHash
+		}
+		o, err := s.orderDao.GetByHash(myOrderHash)
+		if err != nil {
+			panic(err)
+		}
+		if o == nil {
+			logger.Error("order not found for trade " + t.Hash + " address " + address)
+			continue
+		}
+		baseTokenAmount := t.Amount
+		quoteTokenAmount := int64(math.Round(float64(baseTokenAmount) * t.Price))
+		var sellAmount, buyAmount int64
+		var sellSymbol, buySymbol string
+		if o.Side == "SELL" {
+			sellAmount = baseTokenAmount
+			buyAmount = quoteTokenAmount
+			sellSymbol = baseSymbol
+			buySymbol = quoteSymbol
+		} else {
+			sellAmount = quoteTokenAmount
+			buyAmount = baseTokenAmount
+			sellSymbol = quoteSymbol
+			buySymbol = baseSymbol
+		}
+		//logger.Info(sellSymbol, sellAmount)
+		balances[sellSymbol] -= sellAmount
+		balances[buySymbol] += buyAmount
+	}
+
+	return balances
 }

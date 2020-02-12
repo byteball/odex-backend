@@ -1,12 +1,10 @@
 package services
 
 import (
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
+	"github.com/byteball/odex-backend/ws"
 )
 
 // TradeService struct with daos required, responsible for communicating with daos.
@@ -21,7 +19,7 @@ func NewTradeService(TradeDao interfaces.TradeDao) *TradeService {
 }
 
 // Subscribe
-func (s *TradeService) Subscribe(c *ws.Client, bt, qt common.Address) {
+func (s *TradeService) Subscribe(c *ws.Client, bt, qt string) {
 	socket := ws.GetTradeSocket()
 
 	numTrades := 40
@@ -45,7 +43,7 @@ func (s *TradeService) Subscribe(c *ws.Client, bt, qt common.Address) {
 }
 
 // Unsubscribe
-func (s *TradeService) UnsubscribeChannel(c *ws.Client, bt, qt common.Address) {
+func (s *TradeService) UnsubscribeChannel(c *ws.Client, bt, qt string) {
 	socket := ws.GetTradeSocket()
 
 	id := utils.GetTradeChannelID(bt, qt)
@@ -63,42 +61,50 @@ func (s *TradeService) GetByPairName(p string) ([]*types.Trade, error) {
 	return s.tradeDao.GetByPairName(p)
 }
 
-// GetByPairAddress fetches all the trades corresponding to a pair using pair's token address
-func (s *TradeService) GetAllTradesByPairAddress(bt, qt common.Address) ([]*types.Trade, error) {
-	return s.tradeDao.GetAllTradesByPairAddress(bt, qt)
+// GetByPairAssets fetches all the trades corresponding to a pair using pair's asset IDs
+func (s *TradeService) GetAllTradesByPairAssets(bt, qt string) ([]*types.Trade, error) {
+	return s.tradeDao.GetAllTradesByPairAssets(bt, qt)
 }
 
-func (s *TradeService) GetSortedTradesByUserAddress(a common.Address, limit ...int) ([]*types.Trade, error) {
+func (s *TradeService) GetSortedTradesByUserAddress(a string, limit ...int) ([]*types.Trade, error) {
 	return s.tradeDao.GetSortedTradesByUserAddress(a, limit...)
 }
 
-func (s *TradeService) GetSortedTrades(bt, qt common.Address, n int) ([]*types.Trade, error) {
+func (s *TradeService) GetSortedTrades(bt, qt string, n int) ([]*types.Trade, error) {
 	return s.tradeDao.GetSortedTrades(bt, qt, n)
 }
 
 // GetByUserAddress fetches all the trades corresponding to a user address
-func (s *TradeService) GetByUserAddress(a common.Address) ([]*types.Trade, error) {
+func (s *TradeService) GetByUserAddress(a string) ([]*types.Trade, error) {
 	return s.tradeDao.GetByUserAddress(a)
 }
 
 // GetByHash fetches all trades corresponding to a trade hash
-func (s *TradeService) GetByHash(h common.Hash) (*types.Trade, error) {
+func (s *TradeService) GetByHash(h string) (*types.Trade, error) {
 	return s.tradeDao.GetByHash(h)
 }
 
-func (s *TradeService) GetByMakerOrderHash(h common.Hash) ([]*types.Trade, error) {
+func (s *TradeService) GetByMakerOrderHash(h string) ([]*types.Trade, error) {
 	return s.tradeDao.GetByMakerOrderHash(h)
 }
 
-func (s *TradeService) GetByTakerOrderHash(h common.Hash) ([]*types.Trade, error) {
+func (s *TradeService) GetByTakerOrderHash(h string) ([]*types.Trade, error) {
 	return s.tradeDao.GetByTakerOrderHash(h)
 }
 
-func (s *TradeService) GetByOrderHashes(hashes []common.Hash) ([]*types.Trade, error) {
+func (s *TradeService) GetByTriggerUnitHash(h string) ([]*types.Trade, error) {
+	return s.tradeDao.GetByTriggerUnitHash(h)
+}
+
+func (s *TradeService) GetByHashes(hashes []string) ([]*types.Trade, error) {
+	return s.tradeDao.GetByHashes(hashes)
+}
+
+func (s *TradeService) GetByOrderHashes(hashes []string) ([]*types.Trade, error) {
 	return s.tradeDao.GetByOrderHashes(hashes)
 }
 
-func (s *TradeService) UpdatePendingTrade(t *types.Trade, txh common.Hash) (*types.Trade, error) {
+func (s *TradeService) UpdatePendingTrade(t *types.Trade, txh string) (*types.Trade, error) {
 	t.Status = "PENDING"
 	t.TxHash = txh
 
@@ -123,7 +129,19 @@ func (s *TradeService) UpdateSuccessfulTrade(t *types.Trade) (*types.Trade, erro
 	return updated, nil
 }
 
-func (s *TradeService) UpdateTradeTxHash(tr *types.Trade, txh common.Hash) error {
+func (s *TradeService) UpdateTradeStatus(t *types.Trade, status string) (*types.Trade, error) {
+	t.Status = status
+
+	updated, err := s.tradeDao.FindAndModify(t.Hash, t)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	return updated, nil
+}
+
+func (s *TradeService) UpdateTradeTxHash(tr *types.Trade, txh string) error {
 	tr.TxHash = txh
 
 	err := s.tradeDao.UpdateByHash(tr.Hash, tr)

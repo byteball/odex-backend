@@ -15,14 +15,14 @@ There are 7 different resources on the matching engine REST API:
 
 ### GET /account/{userAddress}
 
-Retrieve the account information for a certain Ethereum address (mainly token balances)
+Retrieve the account information for a certain Obyte address (mainly token balances)
 
-### GET /account/{userAddress}/{tokenAddress}
+### GET /account/{userAddress}/{asset}
 
-Retrieve the token balance of a certain Ethereum address
+Retrieve the token balance of a certain Obyte address
 
-* {userAddress} is the Ethereum address of a user/client wallet
-* {tokenAddress} is the Ethereum address of a token (base or quote)
+* {userAddress} is the Obyte address of a user/client wallet
+* {asset} is the ID of an asset (base or quote)
 
 
 # Pairs resource
@@ -31,8 +31,8 @@ Retrieve the token balance of a certain Ethereum address
 
 Retrieve the pair information corresponding to a baseToken and a quoteToken where:
 
-* {baseToken} is the Ethereum address of a base token
-* {quoteToken} is the Ethereum address of a quote token
+* {baseToken} is the ID of a base token
+* {quoteToken} is the ID of a quote token
 
 ### GET /pairs
 
@@ -42,8 +42,8 @@ Retrieve all pairs currently registered on the exchange
 
 Retrieve pair data corresponding to a baseToken and quoteToken where
 
-* {baseToken} is the Ethereum address of a base token
-* {quoteToken} is the Ethereum address of a quote token
+* {baseToken} is the ID of a base token
+* {quoteToken} is the ID of a quote token
 
 This endpoints returns the Open, High, Low, Close, Volume and Change for the last 24 hours
 as well as the last price.
@@ -63,11 +63,11 @@ Retrieve all base tokens currently registered on the exchange
 
 Retrieve all quote tokens currently registered on the exchange
 
-### GET /tokens/{address}
+### GET /tokens/{asset}
 
-Retrieve token information for a token at a certain address
+Retrieve token information for a token asset ID
 
-* {address} is an Ethereum address
+* {asset} is an asset ID ("base" or 44-bytes long string)
 
 
 # Orderbook resource
@@ -76,32 +76,32 @@ Retrieve token information for a token at a certain address
 
 Retrieve the orderbook (amount and pricepoint) corresponding to a a baseToken and a quoteToken where:
 
-* {baseToken} is the Ethereum address of a base token
-* {quoteToken} is the Ethereum address of a quote token
+* {baseToken} is the ID of a base token
+* {quoteToken} is the ID of a quote token
 
 ### GET /orderbook/raw?baseToken={baseToken}&quoteToken={quoteToken}
 
 Retrieve the orderbook (full raw orders, including fields such as hashes, maker, taker addresses, signatures, etc.)
 corresponding to a baseToken and a quoteToken.
 
-* {baseToken} is the Ethereum address of a base token
-* {quoteToken} is the Ethereum address of a quote token
+* {baseToken} is the ID of a base token
+* {quoteToken} is the ID of a quote token
 
 
 # Trade resource
 
 ### GET /trades?address={address}
 
-Retrieve the sorted list of trades for an Ethereum address
+Retrieve the sorted list of trades for an Obyte address
 
-* {address} is an Ethereum address
+* {address} is an Obyte address
 
 ### GET /trades/pair?baseToken={baseToken}&quoteToken={quoteToken}
 
 Retrieve all trades corresponding to a baseToken and a quoteToken
 
-* {baseToken} is the Ethereum address of a base token
-* {quoteToken} is the Ethereum address of a quote token
+* {baseToken} is the ID of a base token
+* {quoteToken} is the ID of a quote token
 
 
 
@@ -109,20 +109,20 @@ Retrieve all trades corresponding to a baseToken and a quoteToken
 
 ### GET /orders?address={address}
 
-Retrieve the sorted list of orders for an Ethereum address
+Retrieve the sorted list of orders for an Obyte address
 
 ### GET /orders/positions?address={address}
 
-Retrieve the list of positions for an Ethereum address. Positions are order that have been sent
+Retrieve the list of positions for an Obyte address. Positions are order that have been sent
 to the matching engine and that are waiting to be matched
 
-* {address} is an Ethereum address
+* {address} is an Obyte address
 
 ### GET /orders/history?address={address}
 
-Retrieve the list of filled order for an Ethereum address.
+Retrieve the list of filled order for an Obyte address.
 
-* {address} is an Ethereum address
+* {address} is an Obyte address
 
 
 # OHLCV resource
@@ -131,9 +131,9 @@ Retrieve the list of filled order for an Ethereum address.
 
 Retrieve OHLCV data corresponding to a baseToken and a quoteToken.
 
-* {baseToken} is the Ethereum address of a baseToken
-* {quoteToken} is the Ethereum address of a quoteToken
-* {pairName} is the pair name under the format {baseTokenSymbol}/{quoteTokenSymbol}(eg. "ZRX/WETH"). I believe this parameter is currently required but it's planned to be optional. The idea is for this parameter to be used for verifications purposes and the API to send back an eror if it does not correspond to a baseToken/quoteToken parameters
+* {baseToken} is the ID of a baseToken
+* {quoteToken} is the ID of a quoteToken
+* {pairName} is the pair name under the format {baseTokenSymbol}/{quoteTokenSymbol}(eg. "ZRX/WETH"). I believe this parameter is currently required but it's planned to be optional. The idea is for this parameter to be used for verifications purposes and the API to send back an error if it does not correspond to a baseToken/quoteToken parameters
 * {duration} is the duration (in units, see param below) of each candlestick
 * {units} is the unit used to represent the above duration: "minute", "hour", "day", "week", "month"
 * {from} is the beginning timestamp from which ohlcv data has to be queried

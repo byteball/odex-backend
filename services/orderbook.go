@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 
-	"github.com/Proofsuite/amp-matching-engine/ws"
+	"github.com/byteball/odex-backend/ws"
 )
 
 // PairService struct with daos required, responsible for communicating with daos.
@@ -32,8 +31,8 @@ func NewOrderBookService(
 }
 
 // GetOrderBook
-func (s *OrderBookService) GetOrderBook(bt, qt common.Address) (map[string]interface{}, error) {
-	pair, err := s.pairDao.GetByTokenAddress(bt, qt)
+func (s *OrderBookService) GetOrderBook(bt, qt string) (map[string]interface{}, error) {
+	pair, err := s.pairDao.GetByAsset(bt, qt)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -60,7 +59,7 @@ func (s *OrderBookService) GetOrderBook(bt, qt common.Address) (map[string]inter
 
 // SubscribeOrderBook is responsible for handling incoming orderbook subscription messages
 // It makes an entry of connection in pairSocket corresponding to pair,unit and duration
-func (s *OrderBookService) SubscribeOrderBook(c *ws.Client, bt, qt common.Address) {
+func (s *OrderBookService) SubscribeOrderBook(c *ws.Client, bt, qt string) {
 	socket := ws.GetOrderBookSocket()
 
 	ob, err := s.GetOrderBook(bt, qt)
@@ -87,15 +86,15 @@ func (s *OrderBookService) UnsubscribeOrderBook(c *ws.Client) {
 	socket.Unsubscribe(c)
 }
 
-func (s *OrderBookService) UnsubscribeOrderBookChannel(c *ws.Client, bt, qt common.Address) {
+func (s *OrderBookService) UnsubscribeOrderBookChannel(c *ws.Client, bt, qt string) {
 	socket := ws.GetOrderBookSocket()
 	id := utils.GetOrderBookChannelID(bt, qt)
 	socket.UnsubscribeChannel(id, c)
 }
 
 // GetRawOrderBook fetches complete orderbook from engine
-func (s *OrderBookService) GetRawOrderBook(bt, qt common.Address) (*types.RawOrderBook, error) {
-	pair, err := s.pairDao.GetByTokenAddress(bt, qt)
+func (s *OrderBookService) GetRawOrderBook(bt, qt string) (*types.RawOrderBook, error) {
+	pair, err := s.pairDao.GetByAsset(bt, qt)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -119,7 +118,7 @@ func (s *OrderBookService) GetRawOrderBook(bt, qt common.Address) (*types.RawOrd
 
 // SubscribeRawOrderBook is responsible for handling incoming orderbook subscription messages
 // It makes an entry of connection in pairSocket corresponding to pair,unit and duration
-func (s *OrderBookService) SubscribeRawOrderBook(c *ws.Client, bt, qt common.Address) {
+func (s *OrderBookService) SubscribeRawOrderBook(c *ws.Client, bt, qt string) {
 	socket := ws.GetRawOrderBookSocket()
 
 	ob, err := s.GetRawOrderBook(bt, qt)
@@ -146,7 +145,7 @@ func (s *OrderBookService) UnsubscribeRawOrderBook(c *ws.Client) {
 	socket.Unsubscribe(c)
 }
 
-func (s *OrderBookService) UnsubscribeRawOrderBookChannel(c *ws.Client, bt, qt common.Address) {
+func (s *OrderBookService) UnsubscribeRawOrderBookChannel(c *ws.Client, bt, qt string) {
 	socket := ws.GetRawOrderBookSocket()
 	id := utils.GetOrderBookChannelID(bt, qt)
 	socket.UnsubscribeChannel(id, c)

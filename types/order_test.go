@@ -3,40 +3,30 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/globalsign/mgo/bson"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
-	"github.com/globalsign/mgo/bson"
 )
 
 func TestBaseTokenSymbol(t *testing.T) {
 	o := &Order{
-		ID:              bson.ObjectIdHex("537f700b537461b70c5f0000"),
-		UserAddress:     common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"),
-		ExchangeAddress: common.HexToAddress("0xae55690d4b079460e6ac28aaa58c9ec7b73a7485"),
-		BaseToken:       common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498"),
-		QuoteToken:      common.HexToAddress("0x12459c951127e0c374ff9105dda097662a027093"),
-		PricePoint:      big.NewInt(1000),
-		Amount:          big.NewInt(1000),
-		FilledAmount:    big.NewInt(100),
-		Status:          "OPEN",
-		Side:            "BUY",
-		PairName:        "ZRX/WETH",
-		MakeFee:         big.NewInt(50),
-		Nonce:           big.NewInt(1000),
-		TakeFee:         big.NewInt(50),
-		Signature: &Signature{
-			V: 28,
-			R: common.HexToHash("0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85"),
-			S: common.HexToHash("0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"),
-		},
-		Hash:      common.HexToHash("0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"),
-		CreatedAt: time.Unix(1405544146, 0),
-		UpdatedAt: time.Unix(1405544146, 0),
+		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		QuoteToken:     "0x12459c951127e0c374ff9105dda097662a027093",
+		Price:          1000,
+		Amount:         1000,
+		FilledAmount:   100,
+		Status:         "OPEN",
+		Side:           "BUY",
+		PairName:       "ZRX/WETH",
+		Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+		CreatedAt:      time.Unix(1405544146, 0),
+		UpdatedAt:      time.Unix(1405544146, 0),
 	}
 
 	assert.Equal(t, o.BaseTokenSymbol(), "ZRX")
@@ -44,28 +34,20 @@ func TestBaseTokenSymbol(t *testing.T) {
 
 func TestQuoteTokenSymbol(t *testing.T) {
 	o := &Order{
-		ID:              bson.ObjectIdHex("537f700b537461b70c5f0000"),
-		UserAddress:     common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"),
-		ExchangeAddress: common.HexToAddress("0xae55690d4b079460e6ac28aaa58c9ec7b73a7485"),
-		BaseToken:       common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498"),
-		QuoteToken:      common.HexToAddress("0x12459c951127e0c374ff9105dda097662a027093"),
-		PricePoint:      big.NewInt(1000),
-		Amount:          big.NewInt(1000),
-		FilledAmount:    big.NewInt(100),
-		Status:          "OPEN",
-		Side:            "BUY",
-		PairName:        "ZRX/WETH",
-		MakeFee:         big.NewInt(50),
-		Nonce:           big.NewInt(1000),
-		TakeFee:         big.NewInt(50),
-		Signature: &Signature{
-			V: 28,
-			R: common.HexToHash("0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85"),
-			S: common.HexToHash("0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"),
-		},
-		Hash:      common.HexToHash("0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"),
-		CreatedAt: time.Unix(1405544146, 0),
-		UpdatedAt: time.Unix(1405544146, 0),
+		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		QuoteToken:     "0x12459c951127e0c374ff9105dda097662a027093",
+		Price:          1000,
+		Amount:         1000,
+		FilledAmount:   100,
+		Status:         "OPEN",
+		Side:           "BUY",
+		PairName:       "ZRX/WETH",
+		Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+		CreatedAt:      time.Unix(1405544146, 0),
+		UpdatedAt:      time.Unix(1405544146, 0),
 	}
 
 	assert.Equal(t, o.QuoteTokenSymbol(), "WETH")
@@ -74,53 +56,37 @@ func TestQuoteTokenSymbol(t *testing.T) {
 func TestOrderMarshal(t *testing.T) {
 
 	o := &Order{
-		ID:              bson.ObjectIdHex("537f700b537461b70c5f0000"),
-		UserAddress:     common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"),
-		ExchangeAddress: common.HexToAddress("0xae55690d4b079460e6ac28aaa58c9ec7b73a7485"),
-		BaseToken:       common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498"),
-		QuoteToken:      common.HexToAddress("0x12459c951127e0c374ff9105dda097662a027093"),
-		PricePoint:      big.NewInt(1000),
-		Amount:          big.NewInt(1000),
-		FilledAmount:    big.NewInt(100),
-		Status:          "OPEN",
-		Side:            "BUY",
-		PairName:        "ZRX/WETH",
-		MakeFee:         big.NewInt(50),
-		Nonce:           big.NewInt(1000),
-		TakeFee:         big.NewInt(50),
-		Signature: &Signature{
-			V: 28,
-			R: common.HexToHash("0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85"),
-			S: common.HexToHash("0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"),
-		},
-		Hash:      common.HexToHash("0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"),
-		CreatedAt: time.Unix(1405544146, 0),
-		UpdatedAt: time.Unix(1405544146, 0),
+		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		QuoteToken:     "0x12459c951127e0c374ff9105dda097662a027093",
+		Price:          1000,
+		Amount:         1000,
+		FilledAmount:   100,
+		Status:         "OPEN",
+		Side:           "BUY",
+		PairName:       "ZRX/WETH",
+		Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+		CreatedAt:      time.Unix(1405544146, 0),
+		UpdatedAt:      time.Unix(1405544146, 0),
 	}
 
 	expected := map[string]interface{}{
-		"id":              "537f700b537461b70c5f0000",
-		"userAddress":     "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
-		"exchangeAddress": "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
-		"baseToken":       "0xe41d2489571d322189246dafa5ebde1f4699f498",
-		"quoteToken":      "0x12459c951127e0c374ff9105dda097662a027093",
-		"price":           "1000",
-		"amount":          "1000",
-		"filledAmount":    "100",
-		"status":          "OPEN",
-		"side":            "BUY",
-		"pairName":        "ZRX/WETH",
-		"makeFee":         "50",
-		"takeFee":         "50",
-		"nonce":           "1000",
-		"signature": map[string]interface{}{
-			"V": 28,
-			"R": "0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85",
-			"S": "0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff",
-		},
-		"hash":      "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
-		"createdAt": "2014-07-17 05:55:46 +0900 KST",
-		"updatedAt": "2014-07-17 05:55:46 +0900 KST",
+		"id":             "537f700b537461b70c5f0000",
+		"userAddress":    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		"matcherAddress": "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		"baseToken":      "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		"quoteToken":     "0x12459c951127e0c374ff9105dda097662a027093",
+		"price":          "1000",
+		"amount":         1000,
+		"filledAmount":   100,
+		"status":         "OPEN",
+		"side":           "BUY",
+		"pairName":       "ZRX/WETH",
+		"hash":           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+		"createdAt":      "2014-07-17 05:55:46 +0900 KST",
+		"updatedAt":      "2014-07-17 05:55:46 +0900 KST",
 	}
 
 	encoded, err := json.Marshal(o)
@@ -141,48 +107,32 @@ func TestOrderMarshal(t *testing.T) {
 
 func TestOrderUnmarshal(t *testing.T) {
 	expected := Order{
-		ID:              bson.ObjectIdHex("537f700b537461b70c5f0000"),
-		UserAddress:     common.HexToAddress("0x14d281013d8ee8ccfa0eca87524e5b3cfa6152ba"),
-		ExchangeAddress: common.HexToAddress("0xae55690d4b079460e6ac28aaa58c9ec7b73a7485"),
-		QuoteToken:      common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498"),
-		BaseToken:       common.HexToAddress("0x12459c951127e0c374ff9105dda097662a027093"),
-		Amount:          big.NewInt(100),
-		PricePoint:      big.NewInt(100),
-		FilledAmount:    big.NewInt(1000),
-		Status:          "OPEN",
-		Side:            "BUY",
-		Nonce:           big.NewInt(1000),
-		MakeFee:         big.NewInt(50),
-		TakeFee:         big.NewInt(50),
-		Signature: &Signature{
-			V: 28,
-			R: common.HexToHash("0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85"),
-			S: common.HexToHash("0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"),
-		},
-		PairName: "ZRX/WETH",
-		Hash:     common.HexToHash("0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"),
+		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		UserAddress:    "0x14d281013d8ee8ccfa0eca87524e5b3cfa6152ba",
+		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		QuoteToken:     "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		BaseToken:      "0x12459c951127e0c374ff9105dda097662a027093",
+		Amount:         100,
+		Price:          100,
+		FilledAmount:   1000,
+		Status:         "OPEN",
+		Side:           "BUY",
+		PairName:       "ZRX/WETH",
+		Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
 	}
 
 	payload :=
 		`{
 			"id": "537f700b537461b70c5f0000",
 			"userAddress": "0x14d281013d8ee8ccfa0eca87524e5b3cfa6152ba",
-			"exchangeAddress": "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+			"matcherAddress": "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 			"quoteToken":"0xe41d2489571d322189246dafa5ebde1f4699f498",
 			"baseToken":"0x12459c951127e0c374ff9105dda097662a027093",
-			"amount": "100",
-			"price": "100",
-			"filledAmount": "1000",
+			"amount": 100,
+			"price": 100,
+			"filledAmount": 1000,
 			"status": "OPEN",
 			"side": "BUY",
-			"nonce":   "1000",
-			"makeFee": "50",
-			"takeFee": "50",
-			"signature": {
-				"V": 28,
-				"R": "0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85",
-				"S": "0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"
-			},
 			"pairName": "ZRX/WETH",
 			"hash":"0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"
 		}`
@@ -200,28 +150,21 @@ func TestOrderUnmarshal(t *testing.T) {
 
 func TestOrderBSON(t *testing.T) {
 	order := &Order{
-		ID:              bson.ObjectIdHex("537f700b537461b70c5f0000"),
-		UserAddress:     common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"),
-		ExchangeAddress: common.HexToAddress("0xae55690d4b079460e6ac28aaa58c9ec7b73a7485"),
-		BaseToken:       common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498"),
-		QuoteToken:      common.HexToAddress("0x12459c951127e0c374ff9105dda097662a027093"),
-		PricePoint:      big.NewInt(1000),
-		Amount:          big.NewInt(1000),
-		FilledAmount:    big.NewInt(100),
-		Status:          "OPEN",
-		Side:            "BUY",
-		PairName:        "ZRX/WETH",
-		MakeFee:         big.NewInt(50),
-		Nonce:           big.NewInt(1000),
-		TakeFee:         big.NewInt(50),
-		Signature: &Signature{
-			V: 28,
-			R: common.HexToHash("0x10b30eb0072a4f0a38b6fca0b731cba15eb2e1702845d97c1230b53a839bcb85"),
-			S: common.HexToHash("0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff"),
-		},
-		Hash:      common.HexToHash("0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a"),
-		CreatedAt: time.Unix(1405544146, 0),
-		UpdatedAt: time.Unix(1405544146, 0),
+		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
+		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
+		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
+		QuoteToken:     "0x12459c951127e0c374ff9105dda097662a027093",
+		Price:          1000,
+		Amount:         1000,
+		FilledAmount:   100,
+		Status:         "OPEN",
+		Side:           "BUY",
+		PairName:       "ZRX/WETH",
+		Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+		CreatedAt:      time.Unix(1405544146, 0).UTC(),
+		UpdatedAt:      time.Unix(1405544146, 0).UTC(),
+		OriginalOrder:  map[string]interface{}{},
 	}
 
 	data, err := bson.Marshal(order)

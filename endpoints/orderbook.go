@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/gorilla/mux"
 )
 
@@ -44,19 +43,19 @@ func (e *OrderBookEndpoint) handleGetOrderBook(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if !common.IsHexAddress(bt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Address")
+	if !isValidAsset(bt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Asset")
 		return
 	}
 
-	if !common.IsHexAddress(qt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Address")
+	if !isValidAsset(qt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Asset")
 		return
 	}
 
-	baseTokenAddress := common.HexToAddress(bt)
-	quoteTokenAddress := common.HexToAddress(qt)
-	ob, err := e.orderBookService.GetOrderBook(baseTokenAddress, quoteTokenAddress)
+	baseAsset := bt
+	quoteAsset := qt
+	ob, err := e.orderBookService.GetOrderBook(baseAsset, quoteAsset)
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -82,19 +81,19 @@ func (e *OrderBookEndpoint) handleGetRawOrderBook(w http.ResponseWriter, r *http
 		return
 	}
 
-	if !common.IsHexAddress(bt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Address")
+	if !isValidAsset(bt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Asset")
 		return
 	}
 
-	if !common.IsHexAddress(qt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Address")
+	if !isValidAsset(qt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Asset")
 		return
 	}
 
-	baseTokenAddress := common.HexToAddress(bt)
-	quoteTokenAddress := common.HexToAddress(qt)
-	ob, err := e.orderBookService.GetRawOrderBook(baseTokenAddress, quoteTokenAddress)
+	baseAsset := bt
+	quoteAsset := qt
+	ob, err := e.orderBookService.GetRawOrderBook(baseAsset, quoteAsset)
 	if err != nil {
 		httputils.WriteError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -129,13 +128,13 @@ func (e *OrderBookEndpoint) rawOrderBookWebSocket(input interface{}, c *ws.Clien
 		return
 	}
 
-	if (p.BaseToken == common.Address{}) {
+	if p.BaseToken == "" {
 		msg := map[string]string{"Message": "Invalid Base Token"}
 		socket.SendErrorMessage(c, msg)
 		return
 	}
 
-	if (p.QuoteToken == common.Address{}) {
+	if p.QuoteToken == "" {
 		msg := map[string]string{"Message": "Invalid Quote Token"}
 		socket.SendErrorMessage(c, msg)
 		return
@@ -152,6 +151,7 @@ func (e *OrderBookEndpoint) orderBookWebSocket(input interface{}, c *ws.Client) 
 	err := json.Unmarshal(b, &ev)
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 
 	socket := ws.GetOrderBookSocket()
@@ -163,6 +163,7 @@ func (e *OrderBookEndpoint) orderBookWebSocket(input interface{}, c *ws.Client) 
 		logger.Error(err)
 		msg := map[string]string{"Message": "Internal server error"}
 		socket.SendErrorMessage(c, msg)
+		return
 	}
 
 	if ev.Type == "UNSUBSCRIBE" {
@@ -170,14 +171,14 @@ func (e *OrderBookEndpoint) orderBookWebSocket(input interface{}, c *ws.Client) 
 		return
 	}
 
-	if (p.BaseToken == common.Address{}) {
-		msg := map[string]string{"Message": "Invalid base token"}
+	if p.BaseToken == "" {
+		msg := map[string]string{"Message": "Empty base token in orderbook"}
 		socket.SendErrorMessage(c, msg)
 		return
 	}
 
-	if (p.QuoteToken == common.Address{}) {
-		msg := map[string]string{"Message": "Invalid quote token"}
+	if p.QuoteToken == "" {
+		msg := map[string]string{"Message": "Empty quote token in orderbook"}
 		socket.SendErrorMessage(c, msg)
 		return
 	}

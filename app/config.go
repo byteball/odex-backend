@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/go-ozzo/ozzo-validation"
+	"github.com/byteball/odex-backend/utils"
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/spf13/viper"
 )
 
@@ -31,22 +31,14 @@ type appConfig struct {
 
 	// the data source name (MongoURL) for connecting to the database. required.
 	DBName string `mapstructure:"db_name"`
-	// the make fee is the percentage to charged from maker
-	MakeFee float64 `mapstructure:"make_fee"`
-	// the take fee is the percentage to charged from maker
-	TakeFee float64 `mapstructure:"take_fee"`
-	// the signing method for JWT. Defaults to "HS256"
-	JWTSigningMethod string `mapstructure:"jwt_signing_method"`
-	// JWT signing key. required.
-	JWTSigningKey string `mapstructure:"jwt_signing_key"`
-	// JWT verification key. required.
-	JWTVerificationKey string `mapstructure:"jwt_verification_key"`
 	// TickDuration is user by tick streaming cron
 	TickDuration map[string][]int64 `mapstructure:"tick_duration"`
 
 	Logs map[string]string `mapstructure:"logs"`
 
-	Ethereum map[string]string `mapstructure:"ethereum"`
+	Obyte map[string]string `mapstructure:"obyte"`
+
+	Env string `mapstructure:"env"`
 
 	EnableTLS    bool   `mapstructure:"enable_tls"`
 	ServerCACert string `mapstructure:"server_ca_cert"`
@@ -87,11 +79,12 @@ func LoadConfig(configPath string, env string) error {
 		return err
 	}
 
-	v.SetEnvPrefix("amp")
+	v.SetEnvPrefix("odex")
 	v.AutomaticEnv()
 
 	//General Configuration
-	Config.ServerPort = 8081
+	Config.Env = env
+	Config.ServerPort = v.Get("SERVER_PORT").(int)
 	Config.ErrorFile = "config/errors.yaml"
 
 	//RabbitMQ Configuration
@@ -133,25 +126,21 @@ func LoadConfig(configPath string, env string) error {
 		Config.MongoDBShardURL3 = ""
 	}
 
-	//Ethereum Configuration
-	Config.Ethereum = make(map[string]string)
-	Config.Ethereum["http_url"] = v.Get("ETHEREUM_NODE_HTTP_URL").(string)
-	Config.Ethereum["ws_url"] = v.Get("ETHEREUM_NODE_WS_URL").(string)
-	Config.Ethereum["exchange_address"] = v.Get("EXCHANGE_CONTRACT_ADDRESS").(string)
-	Config.Ethereum["fee_account"] = v.Get("FEE_ACCOUNT_ADDRESS").(string)
+	Config.Obyte = make(map[string]string)
+	Config.Obyte["http_url"] = v.Get("OBYTE_NODE_HTTP_URL").(string)
+	Config.Obyte["ws_url"] = v.Get("OBYTE_NODE_WS_URL").(string)
 
 	logger.Infof("Server port: %v", Config.ServerPort)
-	logger.Infof("Ethereum node HTTP url: %v", Config.Ethereum["http_url"])
-	logger.Infof("Ethereum node WS url: %v", Config.Ethereum["ws_url"])
-	logger.Infof("Exchange contract address: %v", Config.Ethereum["exchange_address"])
+	logger.Infof("Obyte node HTTP url: %v", Config.Obyte["http_url"])
+	logger.Infof("Obyte node WS url: %v", Config.Obyte["ws_url"])
 	logger.Infof("MongoDB url: %v", Config.MongoURL)
+	logger.Infof("MongoDB db name: %v", Config.DBName)
 	logger.Infof("MongoUserName: %v", Config.MongoDBUsername)
 	logger.Infof("MongoShardURL2: %v", Config.MongoDBShardURL1)
 	logger.Infof("MongoShardURL2: %v", Config.MongoDBShardURL2)
 	logger.Infof("MongoShardURL2: %v", Config.MongoDBShardURL3)
 	logger.Infof("RabbitMQ url: %v", Config.RabbitMQURL)
 	logger.Infof("RabbitMQUserName: %v", Config.RabbitMQUsername)
-	logger.Infof("Fee Account: %v", Config.Ethereum["fee_account"])
 	logger.Infof("TLS Enabled: %v", Config.EnableTLS)
 
 	return Config.Validate()

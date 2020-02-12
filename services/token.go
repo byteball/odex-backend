@@ -1,27 +1,27 @@
 package services
 
 import (
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
 	"github.com/globalsign/mgo/bson"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/types"
 )
 
 // TokenService struct with daos required, responsible for communicating with daos.
 // TokenService functions are responsible for interacting with daos and implements business logics.
 type TokenService struct {
 	tokenDao interfaces.TokenDao
+	provider interfaces.ObyteProvider
 }
 
 // NewTokenService returns a new instance of TokenService
-func NewTokenService(tokenDao interfaces.TokenDao) *TokenService {
-	return &TokenService{tokenDao}
+func NewTokenService(tokenDao interfaces.TokenDao, provider interfaces.ObyteProvider) *TokenService {
+	return &TokenService{tokenDao, provider}
 }
 
 // Create inserts a new token into the database
 func (s *TokenService) Create(token *types.Token) error {
-	t, err := s.tokenDao.GetByAddress(token.Address)
+	t, err := s.tokenDao.GetByAsset(token.Asset)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -45,9 +45,41 @@ func (s *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
 	return s.tokenDao.GetByID(id)
 }
 
-// GetByAddress fetches the detailed document of a token using its contract address
-func (s *TokenService) GetByAddress(addr common.Address) (*types.Token, error) {
-	return s.tokenDao.GetByAddress(addr)
+// GetByAsset fetches the detailed document of a token using its asset ID
+func (s *TokenService) GetByAsset(asset string) (*types.Token, error) {
+	return s.tokenDao.GetByAsset(asset)
+}
+
+func (s *TokenService) CheckByAsset(asset string) (*types.Token, error) {
+	t, err := s.tokenDao.GetByAsset(asset)
+	if err != nil {
+		return nil, err
+	}
+	if t != nil {
+		return t, nil
+	}
+	symbol, err := s.provider.Symbol(asset)
+	if err != nil {
+		return nil, err
+	}
+	decimals, err := s.provider.Decimals(asset)
+	if err != nil {
+		return nil, err
+	}
+	t = &types.Token{
+		Symbol:   symbol,
+		Asset:  asset,
+		Decimals: int(decimals),
+		Active:   true,
+		Listed:   false,
+		Quote:    false,
+		Rank:     0,
+	}
+	/*err = s.Create(t)
+	if err != nil {
+		return nil, err
+	}*/
+	return t, nil
 }
 
 // GetAll fetches all the tokens from db

@@ -3,17 +3,14 @@ package engine
 import (
 	"io/ioutil"
 	"log"
-	"math/big"
+	"math"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/daos"
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils/mocks"
-	"github.com/Proofsuite/amp-matching-engine/utils/units"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/daos"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"github.com/byteball/odex-backend/utils/testutils/mocks"
 )
 
 var db *daos.Database
@@ -21,12 +18,12 @@ var db *daos.Database
 func setupTest() (
 	*Engine,
 	*OrderBook,
-	common.Address,
-	*types.Wallet,
-	*types.Wallet,
+	string,
+	*testutils.Wallet,
+	*testutils.Wallet,
 	*types.Pair,
-	common.Address,
-	common.Address,
+	string,
+	string,
 	*testutils.OrderFactory,
 	*testutils.OrderFactory) {
 
@@ -34,7 +31,10 @@ func setupTest() (
 	log.SetPrefix("\nLOG: ")
 
 	mongoServer := testutils.NewDBTestServer()
-	temp, _ := ioutil.TempDir("", "test")
+	temp, err := ioutil.TempDir("", "test")
+	if err != nil {
+		panic(err)
+	}
 	mongoServer.SetPath(temp)
 
 	session := mongoServer.Session()
@@ -45,24 +45,27 @@ func setupTest() (
 	orderDao := daos.NewOrderDao(opts)
 	orderDao.Drop()
 
+	matcherAddress := testutils.GetTestAddress1()
+
 	pair := testutils.GetZRXWETHTestPair()
 	pairDao := new(mocks.PairDao)
 	tradeDao := new(mocks.TradeDao)
+	obyteProvider := new(mocks.ObyteProvider)
 	pairDao.On("GetAll").Return([]types.Pair{*pair}, nil)
+	obyteProvider.On("GetOperatorAddress").Return(matcherAddress)
 
-	eng := NewEngine(rabbitConn, orderDao, tradeDao, pairDao)
-	ex := testutils.GetTestAddress1()
+	eng := NewEngine(rabbitConn, orderDao, tradeDao, pairDao, obyteProvider)
 	maker := testutils.GetTestWallet1()
 	taker := testutils.GetTestWallet2()
-	zrx := pair.BaseTokenAddress
-	weth := pair.QuoteTokenAddress
+	zrx := pair.BaseAsset
+	weth := pair.QuoteAsset
 
-	factory1, err := testutils.NewOrderFactory(pair, maker, ex)
+	factory1, err := testutils.NewOrderFactory(pair, maker, matcherAddress)
 	if err != nil {
 		panic(err)
 	}
 
-	factory2, err := testutils.NewOrderFactory(pair, taker, ex)
+	factory2, err := testutils.NewOrderFactory(pair, taker, matcherAddress)
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +75,7 @@ func setupTest() (
 		panic("Could not get orderbook")
 	}
 
-	return eng, ob, ex, maker, taker, pair, zrx, weth, factory1, factory2
+	return eng, ob, matcherAddress, maker, taker, pair, zrx, weth, factory1, factory2
 }
 
 func TestSellOrder(t *testing.T) {
@@ -122,7 +125,7 @@ func TestFillOrder1(t *testing.T) {
 
 	o1, _ := factory1.NewSellOrder(1e3, 1e8)
 	o2, _ := factory2.NewBuyOrder(1e3, 1e8)
-	expt1 := types.NewTrade(&o1, &o2, units.Ethers(1e8), big.NewInt(1e3))
+	expt1 := types.NewTrade(&o1, &o2, 1e8, 1e3)
 
 	expo1 := o1
 	expo1.Status = "OPEN"
@@ -130,11 +133,13 @@ func TestFillOrder1(t *testing.T) {
 
 	expo2 := o2
 	expo2.Status = "FILLED"
-	expo2.FilledAmount = units.Ethers(1e8)
+	expo2.FilledAmount = 1e8
+	expo2.RemainingSellAmount = 0
 
 	expo3 := o1
 	expo3.Status = "FILLED"
-	expo3.FilledAmount = units.Ethers(1e8)
+	expo3.FilledAmount = 1e8
+	expo3.RemainingSellAmount = 0
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expo3},
@@ -167,7 +172,7 @@ func TestFillOrder2(t *testing.T) {
 
 	o1, _ := factory1.NewBuyOrder(1e3, 1e8)
 	o2, _ := factory2.NewSellOrder(1e3, 1e8)
-	expt1 := types.NewTrade(&o1, &o2, units.Ethers(1e8), big.NewInt(1e3))
+	expt1 := types.NewTrade(&o1, &o2, 1e8, 1e3)
 
 	expo1 := o1
 	expo1.Status = "OPEN"
@@ -178,11 +183,13 @@ func TestFillOrder2(t *testing.T) {
 
 	expo2 := o2
 	expo2.Status = "FILLED"
-	expo2.FilledAmount = utils.Ethers(1e8)
+	expo2.FilledAmount = 1e8
+	expo2.RemainingSellAmount = 0
 
 	expo3 := o1
 	expo3.Status = "FILLED"
-	expo3.FilledAmount = utils.Ethers(1e8)
+	expo3.FilledAmount = 1e8
+	expo3.RemainingSellAmount = 0
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expo3},
@@ -224,29 +231,34 @@ func TestMultiMatchOrder1(t *testing.T) {
 
 	expso1 := so1
 	expso1.Status = "FILLED"
-	expso1.FilledAmount = utils.Ethers(1e8)
+	expso1.FilledAmount = 1e8
+	expso1.RemainingSellAmount = 0
 	expso2 := so2
 	expso2.Status = "FILLED"
-	expso2.FilledAmount = utils.Ethers(1e8)
+	expso2.FilledAmount = 1e8
+	expso2.RemainingSellAmount = 0
 	expso3 := so3
 	expso3.Status = "FILLED"
-	expso3.FilledAmount = utils.Ethers(1e8)
-	expbo1 := bo1
-	expbo1.Status = "FILLED"
-	expbo1.FilledAmount = utils.Ethers(3e8)
+	expso3.FilledAmount = 1e8
+	expso3.RemainingSellAmount = 0
 
-	expt1 := types.NewTrade(&so1, &bo1, utils.Ethers(1e8), big.NewInt(1e3+4))
-	expt2 := types.NewTrade(&so2, &bo1, utils.Ethers(1e8), big.NewInt(1e3+4))
-	expt3 := types.NewTrade(&so3, &bo1, utils.Ethers(1e8), big.NewInt(1e3+4))
+	expbo1 := bo1
+	expbo1.Status = "PARTIAL_FILLED"
+	expbo1.FilledAmount = 3e8
+	expbo1.RemainingSellAmount = (1e3+4)*3e8 - (1e3+1)*1e8 - (1e3+2)*1e8 - (1e3+3)*1e8
+
+	expt1 := types.NewTrade(&so1, &bo1, 1e8, 1e3+1)
+	expt2 := types.NewTrade(&so2, &bo1, 1e8, 1e3+2)
+	expt3 := types.NewTrade(&so3, &bo1, 1e8, 1e3+3)
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expso1, &expso2, &expso3},
-		&bo1,
+		&expbo1,
 		[]*types.Trade{expt1, expt2, expt3},
 	)
 
 	expectedResponse := &types.EngineResponse{
-		Status:  "ORDER_FILLED",
+		Status:  "ORDER_PARTIALLY_FILLED",
 		Order:   &bo1,
 		Matches: expectedMatches,
 	}
@@ -269,28 +281,33 @@ func TestMultiMatchOrder2(t *testing.T) {
 
 	expbo1 := bo1
 	expbo1.Status = "FILLED"
-	expbo1.FilledAmount = units.Ethers(1e8)
+	expbo1.FilledAmount = 1e8
+	expbo1.RemainingSellAmount = 0
 	expbo2 := bo2
 	expbo2.Status = "FILLED"
-	expbo2.FilledAmount = units.Ethers(1e8)
+	expbo2.FilledAmount = 1e8
+	expbo2.RemainingSellAmount = 0
 	expbo3 := bo3
 	expbo3.Status = "FILLED"
-	expbo3.FilledAmount = units.Ethers(1e8)
+	expbo3.FilledAmount = 1e8
+	expbo3.RemainingSellAmount = 0
+
 	expso1 := so1
 	expso1.Status = "FILLED"
-	expso1.FilledAmount = utils.Ethers(3e8)
+	expso1.FilledAmount = 3e8
+	expso1.RemainingSellAmount = 0
 
 	ob.buyOrder(&bo1)
 	ob.buyOrder(&bo2)
 	ob.buyOrder(&bo3)
 
-	expt1 := types.NewTrade(&bo1, &so1, units.Ethers(1e8), big.NewInt(1e3))
-	expt2 := types.NewTrade(&bo2, &so1, units.Ethers(1e8), big.NewInt(1e3))
-	expt3 := types.NewTrade(&bo3, &so1, units.Ethers(1e8), big.NewInt(1e3))
+	expt1 := types.NewTrade(&bo1, &so1, 1e8, 1000+1)
+	expt2 := types.NewTrade(&bo2, &so1, 1e8, 1000+2)
+	expt3 := types.NewTrade(&bo3, &so1, 1e8, 1000+3)
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expbo3, &expbo2, &expbo1},
-		&so1,
+		&expso1,
 		[]*types.Trade{expt3, expt2, expt1},
 	)
 
@@ -318,25 +335,34 @@ func TestPartialMatchOrder1(t *testing.T) {
 	bo1, _ := factory2.NewBuyOrder(1e3+5, 4e8)
 
 	expso1 := so1
-	expso1.FilledAmount = units.Ethers(1e8)
+	expso1.FilledAmount = 1e8
+	expso1.RemainingSellAmount = 0
 	expso1.Status = "FILLED"
 	expso2 := so2
-	expso2.FilledAmount = units.Ethers(1e8)
+	expso2.FilledAmount = 1e8
+	expso2.RemainingSellAmount = 0
 	expso2.Status = "FILLED"
 	expso3 := so3
-	expso3.FilledAmount = units.Ethers(1e8)
+	expso3.FilledAmount = 1e8
+	expso3.RemainingSellAmount = 0
 	expso3.Status = "FILLED"
 	expso4 := so4
-	expso4.FilledAmount = units.Ethers(1e8)
+	expso4.FilledAmount = 100996016
+	restAfter3Sells := (1e3+5)*4e8 - (1e3+1)*1e8 - (1e3+2)*1e8 - (1e3+3)*1e8
+	filled := int64(math.Round(restAfter3Sells / (1e3 + 4)))
+	expso4.FilledAmount = filled
+	expso4.RemainingSellAmount = expso4.Amount - expso4.FilledAmount
 	expso4.Status = "PARTIAL_FILLED"
+
 	expbo1 := bo1
-	expbo1.FilledAmount = units.Ethers(4e8)
+	expbo1.FilledAmount = 3*1e8 + filled
+	expbo1.RemainingSellAmount = 0
 	expbo1.Status = "FILLED"
 
-	expt1 := types.NewTrade(&so1, &bo1, units.Ethers(1e8), big.NewInt(1e3+5))
-	expt2 := types.NewTrade(&so2, &bo1, units.Ethers(1e8), big.NewInt(1e3+5))
-	expt3 := types.NewTrade(&so3, &bo1, units.Ethers(1e8), big.NewInt(1e3+5))
-	expt4 := types.NewTrade(&so4, &bo1, units.Ethers(1e8), big.NewInt(1e3+5))
+	expt1 := types.NewTrade(&so1, &bo1, 1e8, 1e3+1)
+	expt2 := types.NewTrade(&so2, &bo1, 1e8, 1e3+2)
+	expt3 := types.NewTrade(&so3, &bo1, 1e8, 1e3+3)
+	expt4 := types.NewTrade(&so4, &bo1, filled, 1e3+4)
 
 	ob.sellOrder(&so1)
 	ob.sellOrder(&so2)
@@ -350,7 +376,7 @@ func TestPartialMatchOrder1(t *testing.T) {
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expso1, &expso2, &expso3, &expso4},
-		&bo1,
+		&expbo1,
 		[]*types.Trade{expt1, expt2, expt3, expt4},
 	)
 
@@ -373,26 +399,31 @@ func TestPartialMatchOrder2(t *testing.T) {
 	so1, _ := factory2.NewSellOrder(1e3+1, 4e8)
 
 	expbo1 := bo1
-	expbo1.FilledAmount = utils.Ethers(1e8)
+	expbo1.FilledAmount = 1e8
+	expbo1.RemainingSellAmount = 0
 	expbo1.Status = "FILLED"
 	expbo2 := bo2
-	expbo2.FilledAmount = utils.Ethers(1e8)
+	expbo2.FilledAmount = 1e8
+	expbo2.RemainingSellAmount = 0
 	expbo2.Status = "FILLED"
 	expbo3 := bo3
-	expbo3.FilledAmount = utils.Ethers(1e8)
+	expbo3.FilledAmount = 1e8
+	expbo3.RemainingSellAmount = 0
 	expbo3.Status = "FILLED"
 	expbo4 := bo4
-	expbo4.FilledAmount = utils.Ethers(1e8)
+	expbo4.FilledAmount = 1e8
+	expbo4.RemainingSellAmount = (1e3 + 2) * 1e8
 	expbo4.Status = "PARTIAL_FILLED"
 
 	expso1 := so1
-	expso1.FilledAmount = utils.Ethers(4e8)
+	expso1.FilledAmount = 4e8
+	expso1.RemainingSellAmount = 0
 	expso1.Status = "FILLED"
 
-	expt1 := types.NewTrade(&bo1, &so1, utils.Ethers(1e8), big.NewInt(1e3+1))
-	expt2 := types.NewTrade(&bo2, &so1, utils.Ethers(1e8), big.NewInt(1e3+1))
-	expt3 := types.NewTrade(&bo3, &so1, utils.Ethers(1e8), big.NewInt(1e3+1))
-	expt4 := types.NewTrade(&bo4, &so1, utils.Ethers(1e8), big.NewInt(1e3+1))
+	expt1 := types.NewTrade(&bo1, &so1, 1e8, 1e3+5)
+	expt2 := types.NewTrade(&bo2, &so1, 1e8, 1e3+4)
+	expt3 := types.NewTrade(&bo3, &so1, 1e8, 1e3+3)
+	expt4 := types.NewTrade(&bo4, &so1, 1e8, 1e3+2)
 
 	ob.buyOrder(&bo1)
 	ob.buyOrder(&bo2)
@@ -406,7 +437,7 @@ func TestPartialMatchOrder2(t *testing.T) {
 
 	expectedMatches := types.NewMatches(
 		[]*types.Order{&expbo1, &expbo2, &expbo3, &expbo4},
-		&so1,
+		&expso1,
 		[]*types.Trade{expt1, expt2, expt3, expt4},
 	)
 

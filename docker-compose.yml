@@ -1,23 +1,18 @@
 version: '3'
 services:
   matching-engine:
-    image: amp-matching-engine
+    image: odex-matching-engine
     ports:
       - "8081:8081"
     environment:
-      - AMP_ETHEREUM_NODE_WS_URL=ws://ethereum:8546
-      - AMP_MONGO_URL=mongodb
-      - AMP_MONGO_DBNAME
-      - AMP_REDIS_URL=redis://redis:6379
-      - AMP_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - AMP_EXCHANGE_CONTRACT_ADDRESS
-      - AMP_WETH_CONTRACT_ADDRESS
-      - AMP_FEE_ACCOUNT_ADDRESS
+      - ODEX_MONGO_URL=mongodb
+      - ODEX_MONGO_DBNAME
+      - ODEX_REDIS_URL=redis://redis:6379
+      - ODEX_RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mongodb
       - rabbitmq
       - redis
-      - ethereum
 
   mongodb:
     image: mongo:latest
@@ -37,45 +32,6 @@ services:
     ports:
       - '6379:6379'
 
-  ethereum:
-    image: ethereum/client-go
-    container_name: "ethereum"
-    volumes:
-      - ./${AMP_ETHEREUM_DATADIR}:/root/.ethereum/client-go
-    command: [
-      "--port", "3001",
-      "--networkid", $AMP_ETHEREUM_NETWORK_ID,
-      "--nodiscover",
-      "--datadir", $AMP_ETHEREUM_DATADIR,
-      "--maxpeers", "0",
-      "--rpc", "--rpcport", "8545", "--rpcaddr", "127.0.0.1",
-      "--ws", "--wsport", "8546", "--wsaddr", "0.0.0.0",
-      "--wsorigins", "*",
-      "--wsapi", "eth,net,web3,personal",
-      "--minerthreads", "1",
-      "--mine",
-      "--etherbase", $AMP_ETHERBASE,
-      "--rpccorsdomain", "*"
-    ]
-      # geth \
-      # --port 3001 \
-      # --networkid 8888 \
-      # --nodiscover \
-      # --datadir="chain" \
-      # --maxpeers=0  \
-      # --rpc \
-      # --rpcport 8545 \
-      # --rpcaddr 127.0.0.1 \
-      # --rpcapi "eth,net,web3,personal" \
-      # -ws \
-      # --wsport 8546 \
-      # --wsaddr 0.0.0.0 \
-      # --wsorigins "*" \
-      # --wsapi "eth,net,web3,personal" \
-      # --minerthreads "1" \
-      # -mine \
-      # --etherbase "0xe8e84ee367bc63ddb38d3d01bccef106c194dc47" \
-      # --rpccorsdomain="*"
 
 
 

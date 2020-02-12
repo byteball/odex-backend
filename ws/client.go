@@ -3,8 +3,7 @@ package ws
 import (
 	"sync"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
 	"github.com/gorilla/websocket"
 )
 
@@ -35,14 +34,15 @@ func NewClient(c *websocket.Conn) *Client {
 }
 
 // SendMessage constructs the message with proper structure to be sent over websocket
-func (c *Client) SendMessage(channel string, msgType string, payload interface{}, h ...common.Hash) {
+func (c *Client) SendMessage(channel string, msgType string, payload interface{}, h ...string) {
+	logger.Info("SendMessage", channel, msgType, payload)
 	e := types.WebsocketEvent{
 		Type:    msgType,
 		Payload: payload,
 	}
 
 	if len(h) > 0 {
-		e.Hash = h[0].Hex()
+		e.Hash = h[0]
 	}
 
 	m := types.WebsocketMessage{
@@ -66,10 +66,10 @@ func (c *Client) closeConnection() {
 	c.Close()
 }
 
-func (c *Client) SendOrderErrorMessage(err error, h common.Hash) {
+func (c *Client) SendOrderErrorMessage(err error, h string) {
 	p := map[string]interface{}{
 		"message": err.Error(),
-		"hash":    h.Hex(),
+		"hash":    h,
 	}
 
 	e := types.WebsocketEvent{

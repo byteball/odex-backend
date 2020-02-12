@@ -2,9 +2,6 @@ package types
 
 import (
 	"fmt"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // SubscriptionEvent is an enum signifies whether the incoming message is of type Subscribe or unsubscribe
@@ -63,13 +60,13 @@ type OrderMatchedPayload struct {
 }
 
 type SubscriptionPayload struct {
-	PairName   string         `json:"pairName,omitempty"`
-	QuoteToken common.Address `json:"quoteToken,omitempty"`
-	BaseToken  common.Address `json:"baseToken,omitempty"`
-	From       int64          `json"from"`
-	To         int64          `json:"to"`
-	Duration   int64          `json:"duration"`
-	Units      string         `json:"units"`
+	PairName   string `json:"pairName,omitempty"`
+	QuoteToken string `json:"quoteToken,omitempty"`
+	BaseToken  string `json:"baseToken,omitempty"`
+	From       int64  `json:"from"`
+	To         int64  `json:"to"`
+	Duration   int64  `json:"duration"`
+	Units      string `json:"units"`
 }
 
 func NewOrderWebsocketMessage(o *Order) *WebsocketMessage {
@@ -77,7 +74,7 @@ func NewOrderWebsocketMessage(o *Order) *WebsocketMessage {
 		Channel: "orders",
 		Event: WebsocketEvent{
 			Type:    "NEW_ORDER",
-			Hash:    o.Hash.Hex(),
+			Hash:    o.Hash,
 			Payload: o,
 		},
 	}
@@ -85,13 +82,13 @@ func NewOrderWebsocketMessage(o *Order) *WebsocketMessage {
 
 func NewOrderAddedWebsocketMessage(o *Order, p *Pair, filled int64) *WebsocketMessage {
 	o.Process(p)
-	o.FilledAmount = big.NewInt(filled)
+	o.FilledAmount = filled
 	o.Status = "OPEN"
 	return &WebsocketMessage{
 		Channel: "orders",
 		Event: WebsocketEvent{
 			Type:    "ORDER_ADDED",
-			Hash:    o.Hash.Hex(),
+			Hash:    o.Hash,
 			Payload: o,
 		},
 	}
@@ -102,7 +99,7 @@ func NewOrderCancelWebsocketMessage(oc *OrderCancel) *WebsocketMessage {
 		Channel: "orders",
 		Event: WebsocketEvent{
 			Type:    "CANCEL_ORDER",
-			Hash:    oc.Hash.Hex(),
+			Hash:    oc.OrderHash,
 			Payload: oc,
 		},
 	}

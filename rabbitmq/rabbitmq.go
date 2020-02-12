@@ -5,8 +5,8 @@ import (
 	"crypto/x509"
 	"log"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/utils"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/streadway/amqp"
 )
 
@@ -105,7 +105,7 @@ func NewTLSConnection() *amqp.Connection {
 
 func (c *Connection) GetQueue(ch *amqp.Channel, queue string) *amqp.Queue {
 	if queues[queue] == nil {
-		q, err := ch.QueueDeclare(queue, false, false, false, false, nil)
+		q, err := ch.QueueDeclare(queue+"@"+app.Config.Env, false, false, false, false, nil)
 		if err != nil {
 			log.Fatalf("Failed to declare a queue: %s", err)
 		}
@@ -118,7 +118,7 @@ func (c *Connection) GetQueue(ch *amqp.Channel, queue string) *amqp.Queue {
 
 func (c *Connection) DeclareQueue(ch *amqp.Channel, name string) error {
 	if queues[name] == nil {
-		q, err := ch.QueueDeclare(name, false, false, false, false, nil)
+		q, err := ch.QueueDeclare(name+"@"+app.Config.Env, false, false, false, false, nil)
 		if err != nil {
 			logger.Error(err)
 			return err
@@ -134,7 +134,7 @@ func (c *Connection) DeclareThrottledQueue(ch *amqp.Channel, name string) error 
 	ch.Qos(1, 0, true)
 
 	if queues[name] == nil {
-		q, err := ch.QueueDeclare(name, false, false, false, false, nil)
+		q, err := ch.QueueDeclare(name+"@"+app.Config.Env, false, false, false, false, nil)
 		if err != nil {
 			logger.Error(err)
 			return err
@@ -148,6 +148,9 @@ func (c *Connection) DeclareThrottledQueue(ch *amqp.Channel, name string) error 
 
 func (c *Connection) GetChannel(id string) *amqp.Channel {
 	if channels[id] == nil {
+		if c.Conn == nil {
+			panic("nil connection")
+		}
 		ch, err := c.Conn.Channel()
 		if err != nil {
 			log.Fatalf("Failed to open a channel: %s", err)
@@ -175,7 +178,8 @@ func (c *Connection) Publish(ch *amqp.Channel, q *amqp.Queue, bytes []byte) erro
 
 	if err != nil {
 		logger.Error(err)
-		return err
+		panic(err)
+		//return err
 	}
 
 	return nil
@@ -220,12 +224,12 @@ func (c *Connection) ConsumeAfterAck(ch *amqp.Channel, q *amqp.Queue) (<-chan am
 }
 
 func (c *Connection) Purge(ch *amqp.Channel, name string) error {
-	_, err := ch.QueueInspect(name)
+	_, err := ch.QueueInspect(name + "@" + app.Config.Env)
 	if err != nil {
 		return nil
 	}
 
-	_, err = ch.QueuePurge(name, false)
+	_, err = ch.QueuePurge(name+"@"+app.Config.Env, false)
 	if err != nil {
 		logger.Error(err)
 		return err

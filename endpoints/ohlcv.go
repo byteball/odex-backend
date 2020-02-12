@@ -6,11 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/gorilla/mux"
 )
 
@@ -78,19 +77,19 @@ func (e *OHLCVEndpoint) handleGetOHLCV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !common.IsHexAddress(bt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid base token address")
+	if !isValidAsset(bt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid base token asset in ohlcv")
 		return
 	}
 
-	if !common.IsHexAddress(qt) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid quote token address")
+	if !isValidAsset(qt) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid quote token asset in ohlcv")
 		return
 	}
 
-	p.Pair = []types.PairAddresses{{
-		BaseToken:  common.HexToAddress(bt),
-		QuoteToken: common.HexToAddress(qt),
+	p.Pair = []types.PairAssets{{
+		BaseToken:  bt,
+		QuoteToken: qt,
 		Name:       pair,
 	}}
 
@@ -116,6 +115,7 @@ func (e *OHLCVEndpoint) ohlcvWebSocket(input interface{}, c *ws.Client) {
 	err := json.Unmarshal(b, &ev)
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 
 	socket := ws.GetOHLCVSocket()
@@ -132,15 +132,16 @@ func (e *OHLCVEndpoint) ohlcvWebSocket(input interface{}, c *ws.Client) {
 		err = json.Unmarshal(b, &p)
 		if err != nil {
 			logger.Error(err)
-		}
-
-		if (p.BaseToken == common.Address{}) {
-			socket.SendErrorMessage(c, "Invalid base token")
 			return
 		}
 
-		if (p.QuoteToken == common.Address{}) {
-			socket.SendErrorMessage(c, "Invalid Quote Token")
+		if p.BaseToken == "" {
+			socket.SendErrorMessage(c, "Empty base token in ohlcv")
+			return
+		}
+
+		if p.QuoteToken == "" {
+			socket.SendErrorMessage(c, "Empty Quote Token in ohlcv")
 			return
 		}
 

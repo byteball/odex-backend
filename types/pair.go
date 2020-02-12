@@ -2,11 +2,8 @@ package types
 
 import (
 	"encoding/json"
-	"math/big"
+	"math"
 	"time"
-
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
-	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/globalsign/mgo/bson"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -14,20 +11,18 @@ import (
 
 // Pair struct is used to model the pair data in the system and DB
 type Pair struct {
-	ID                 bson.ObjectId  `json:"-" bson:"_id"`
-	BaseTokenSymbol    string         `json:"baseTokenSymbol,omitempty" bson:"baseTokenSymbol"`
-	BaseTokenAddress   common.Address `json:"baseTokenAddress,omitempty" bson:"baseTokenAddress"`
-	BaseTokenDecimals  int            `json:"baseTokenDecimals,omitempty" bson:"baseTokenDecimals"`
-	QuoteTokenSymbol   string         `json:"quoteTokenSymbol,omitempty" bson:"quoteTokenSymbol"`
-	QuoteTokenAddress  common.Address `json:"quoteTokenAddress,omitempty" bson:"quoteTokenAddress"`
-	QuoteTokenDecimals int            `json:"quoteTokenDecimals,omitempty" bson:"quoteTokenDecimals"`
-	Listed             bool           `json:"listed,omitempty" bson:"listed"`
-	Active             bool           `json:"active,omitempty" bson:"active"`
-	Rank               int            `json:"rank,omitempty" bson:"rank"`
-	MakeFee            *big.Int       `json:"makeFee,omitempty" bson:"makeFee"`
-	TakeFee            *big.Int       `json:"takeFee,omitempty" bson:"takeFee"`
-	CreatedAt          time.Time      `json:"-" bson:"createdAt"`
-	UpdatedAt          time.Time      `json:"-" bson:"updatedAt"`
+	ID                 bson.ObjectId `json:"-" bson:"_id"`
+	BaseTokenSymbol    string        `json:"baseTokenSymbol,omitempty" bson:"baseTokenSymbol"`
+	BaseAsset          string        `json:"baseAsset,omitempty" bson:"baseAsset"`
+	BaseTokenDecimals  int           `json:"baseTokenDecimals,omitempty" bson:"baseTokenDecimals"`
+	QuoteTokenSymbol   string        `json:"quoteTokenSymbol,omitempty" bson:"quoteTokenSymbol"`
+	QuoteAsset         string        `json:"quoteAsset,omitempty" bson:"quoteAsset"`
+	QuoteTokenDecimals int           `json:"quoteTokenDecimals,omitempty" bson:"quoteTokenDecimals"`
+	Listed             bool          `json:"listed,omitempty" bson:"listed"`
+	Active             bool          `json:"active,omitempty" bson:"active"`
+	Rank               int           `json:"rank,omitempty" bson:"rank"`
+	CreatedAt          time.Time     `json:"-" bson:"createdAt"`
+	UpdatedAt          time.Time     `json:"-" bson:"updatedAt"`
 }
 
 func (p *Pair) UnmarshalJSON(b []byte) error {
@@ -38,12 +33,12 @@ func (p *Pair) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if pair["baseTokenAddress"] != nil {
-		p.BaseTokenAddress = common.HexToAddress(pair["baseTokenAddress"].(string))
+	if pair["baseAsset"] != nil {
+		p.BaseAsset = pair["baseAsset"].(string)
 	}
 
-	if pair["quoteTokenAddress"] != nil {
-		p.QuoteTokenAddress = common.HexToAddress(pair["quoteTokenAddress"].(string))
+	if pair["quoteAsset"] != nil {
+		p.QuoteAsset = pair["quoteAsset"].(string)
 	}
 
 	if pair["baseTokenSymbol"] != nil {
@@ -55,15 +50,15 @@ func (p *Pair) UnmarshalJSON(b []byte) error {
 	}
 
 	if pair["baseTokenDecimals"] != nil {
-		p.BaseTokenDecimals = pair["baseTokenDecimals"].(int)
+		p.BaseTokenDecimals = int(pair["baseTokenDecimals"].(float64))
 	}
 
 	if pair["quoteTokenDecimals"] != nil {
-		p.QuoteTokenDecimals = pair["quoteTokenDecimals"].(int)
+		p.QuoteTokenDecimals = int(pair["quoteTokenDecimals"].(float64))
 	}
 
 	if pair["rank"] != nil {
-		p.Rank = pair["rank"].(int)
+		p.Rank = int(pair["rank"].(float64))
 	}
 
 	return nil
@@ -76,31 +71,23 @@ func (p *Pair) MarshalJSON() ([]byte, error) {
 		"baseTokenDecimals":  p.BaseTokenDecimals,
 		"quoteTokenSymbol":   p.QuoteTokenSymbol,
 		"quoteTokenDecimals": p.QuoteTokenDecimals,
-		"baseTokenAddress":   p.BaseTokenAddress,
-		"quoteTokenAddress":  p.QuoteTokenAddress,
+		"baseAsset":          p.BaseAsset,
+		"quoteAsset":         p.QuoteAsset,
 		"rank":               p.Rank,
 		"active":             p.Active,
 		"listed":             p.Listed,
 	}
 
-	if p.MakeFee != nil {
-		pair["makeFee"] = p.MakeFee.String()
-	}
-
-	if p.TakeFee != nil {
-		pair["takeFee"] = p.TakeFee.String()
-	}
-
 	return json.Marshal(pair)
 }
 
-type PairAddresses struct {
-	Name       string         `json:"name" bson:"name"`
-	BaseToken  common.Address `json:"baseToken" bson:"baseToken"`
-	QuoteToken common.Address `json:"quoteToken" bson:"quoteToken"`
+type PairAssets struct {
+	Name       string `json:"name" bson:"name"`
+	BaseToken  string `json:"baseToken" bson:"baseToken"`
+	QuoteToken string `json:"quoteToken" bson:"quoteToken"`
 }
 
-type PairAddressesRecord struct {
+type PairAssetsRecord struct {
 	Name       string `json:"name" bson:"name"`
 	BaseToken  string `json:"baseToken" bson:"baseToken"`
 	QuoteToken string `json:"quoteToken" bson:"quoteToken"`
@@ -110,42 +97,40 @@ type PairRecord struct {
 	ID bson.ObjectId `json:"id" bson:"_id"`
 
 	BaseTokenSymbol    string    `json:"baseTokenSymbol" bson:"baseTokenSymbol"`
-	BaseTokenAddress   string    `json:"baseTokenAddress" bson:"baseTokenAddress"`
+	BaseAsset          string    `json:"baseAsset" bson:"baseAsset"`
 	BaseTokenDecimals  int       `json:"baseTokenDecimals" bson:"baseTokenDecimals"`
 	QuoteTokenSymbol   string    `json:"quoteTokenSymbol" bson:"quoteTokenSymbol"`
-	QuoteTokenAddress  string    `json:"quoteTokenAddress" bson:"quoteTokenAddress"`
+	QuoteAsset         string    `json:"quoteAsset" bson:"quoteAsset"`
 	QuoteTokenDecimals int       `json:"quoteTokenDecimals" bson:"quoteTokenDecimals"`
 	Active             bool      `json:"active" bson:"active"`
 	Listed             bool      `json:"listed" bson:"listed"`
-	MakeFee            string    `json:"makeFee" bson:"makeFee"`
-	TakeFee            string    `json:"takeFee" bson:"takeFee"`
 	Rank               int       `json:"rank" bson:"rank"`
 	CreatedAt          time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt          time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
-func (p *Pair) BaseTokenMultiplier() *big.Int {
-	return math.Exp(big.NewInt(10), big.NewInt(int64(p.BaseTokenDecimals)))
+func (p *Pair) BaseTokenMultiplier() int64 {
+	return int64(math.Pow(10, float64(p.BaseTokenDecimals)))
 }
 
-func (p *Pair) QuoteTokenMultiplier() *big.Int {
-	return math.Exp(big.NewInt(10), big.NewInt(int64(p.QuoteTokenDecimals)))
+func (p *Pair) QuoteTokenMultiplier() int64 {
+	return int64(math.Pow(10, float64(p.QuoteTokenDecimals)))
 }
 
-func (p *Pair) PairMultiplier() *big.Int {
-	defaultMultiplier := math.Exp(big.NewInt(10), big.NewInt(18))
-	baseTokenMultiplier := math.Exp(big.NewInt(10), big.NewInt(int64(p.BaseTokenDecimals)))
-
-	return math.Mul(defaultMultiplier, baseTokenMultiplier)
+func (p *Pair) PairMultiplier() int64 {
+	//	defaultMultiplier := math.Exp(10, 18)
+	baseTokenMultiplier := int64(math.Pow(10, float64(p.BaseTokenDecimals)))
+	return baseTokenMultiplier
+	//	return math.Mul(defaultMultiplier, baseTokenMultiplier)
 }
 
 func (p *Pair) Code() string {
-	code := p.BaseTokenSymbol + "/" + p.QuoteTokenSymbol + "::" + p.BaseTokenAddress.Hex() + "::" + p.QuoteTokenAddress.Hex()
+	code := p.BaseTokenSymbol + "/" + p.QuoteTokenSymbol + "::" + p.BaseAsset + "::" + p.QuoteAsset
 	return code
 }
 
-func (p *Pair) AddressCode() string {
-	code := p.BaseTokenAddress.Hex() + "::" + p.QuoteTokenAddress.Hex()
+func (p *Pair) AssetCode() string {
+	code := p.BaseAsset + "::" + p.QuoteAsset
 	return code
 }
 
@@ -154,24 +139,24 @@ func (p *Pair) Name() string {
 	return name
 }
 
-func (p *Pair) ParseAmount(a *big.Int) float64 {
+func (p *Pair) ParseAmount(a int64) float64 {
 	nominator := a
 	denominator := p.BaseTokenMultiplier()
-	amount := math.DivideToFloat(nominator, denominator)
+	amount := float64(nominator) / float64(denominator)
 
 	return amount
 }
 
-func (p *Pair) ParsePricePoint(pp *big.Int) float64 {
-	nominator := pp
-	denominator := math.Mul(math.Exp(big.NewInt(10), big.NewInt(18)), p.QuoteTokenMultiplier())
-	price := math.DivideToFloat(nominator, denominator)
+func (p *Pair) ParsePrice(pp float64) float64 {
+	//	nominator := pp
+	//	denominator := math.Mul(math.Exp(10, 18), p.QuoteTokenMultiplier())
+	//	price := math.DivideToFloat(nominator, denominator)
 
-	return price
+	return pp
 }
 
-func (p *Pair) MinQuoteAmount() *big.Int {
-	return math.Add(math.Mul(big.NewInt(2), p.MakeFee), math.Mul(big.NewInt(2), p.TakeFee))
+func (p *Pair) MinQuoteAmount() int64 {
+	return 0
 }
 
 func (p *Pair) SetBSON(raw bson.Raw) error {
@@ -182,24 +167,16 @@ func (p *Pair) SetBSON(raw bson.Raw) error {
 		return err
 	}
 
-	makeFee := big.NewInt(0)
-	makeFee, _ = makeFee.SetString(decoded.MakeFee, 10)
-
-	takeFee := big.NewInt(0)
-	takeFee, _ = takeFee.SetString(decoded.TakeFee, 10)
-
 	p.ID = decoded.ID
 	p.BaseTokenSymbol = decoded.BaseTokenSymbol
-	p.BaseTokenAddress = common.HexToAddress(decoded.BaseTokenAddress)
+	p.BaseAsset = decoded.BaseAsset
 	p.BaseTokenDecimals = decoded.BaseTokenDecimals
 	p.QuoteTokenSymbol = decoded.QuoteTokenSymbol
-	p.QuoteTokenAddress = common.HexToAddress(decoded.QuoteTokenAddress)
+	p.QuoteAsset = decoded.QuoteAsset
 	p.QuoteTokenDecimals = decoded.QuoteTokenDecimals
 	p.Listed = decoded.Listed
 	p.Active = decoded.Active
 	p.Rank = decoded.Rank
-	p.MakeFee = makeFee
-	p.TakeFee = takeFee
 
 	p.CreatedAt = decoded.CreatedAt
 	p.UpdatedAt = decoded.UpdatedAt
@@ -210,25 +187,23 @@ func (p *Pair) GetBSON() (interface{}, error) {
 	return &PairRecord{
 		ID:                 p.ID,
 		BaseTokenSymbol:    p.BaseTokenSymbol,
-		BaseTokenAddress:   p.BaseTokenAddress.Hex(),
+		BaseAsset:          p.BaseAsset,
 		BaseTokenDecimals:  p.BaseTokenDecimals,
 		QuoteTokenSymbol:   p.QuoteTokenSymbol,
-		QuoteTokenAddress:  p.QuoteTokenAddress.Hex(),
+		QuoteAsset:         p.QuoteAsset,
 		QuoteTokenDecimals: p.QuoteTokenDecimals,
 		Active:             p.Active,
 		Listed:             p.Listed,
 		Rank:               p.Rank,
-		MakeFee:            p.MakeFee.String(),
-		TakeFee:            p.TakeFee.String(),
 		CreatedAt:          p.CreatedAt,
 		UpdatedAt:          p.UpdatedAt,
 	}, nil
 }
 
-func (p Pair) ValidateAddresses() error {
+func (p Pair) ValidateAssets() error {
 	return validation.ValidateStruct(&p,
-		validation.Field(&p.BaseTokenAddress, validation.Required),
-		validation.Field(&p.QuoteTokenAddress, validation.Required),
+		validation.Field(&p.BaseAsset, validation.Required),
+		validation.Field(&p.QuoteAsset, validation.Required),
 	)
 }
 
@@ -236,8 +211,8 @@ func (p Pair) ValidateAddresses() error {
 // struct satisfies all the conditions for a valid instance
 func (p Pair) Validate() error {
 	return validation.ValidateStruct(&p,
-		validation.Field(&p.BaseTokenAddress, validation.Required),
-		validation.Field(&p.QuoteTokenAddress, validation.Required),
+		validation.Field(&p.BaseAsset, validation.Required),
+		validation.Field(&p.QuoteAsset, validation.Required),
 		validation.Field(&p.BaseTokenSymbol, validation.Required),
 		validation.Field(&p.QuoteTokenSymbol, validation.Required),
 	)
@@ -249,97 +224,97 @@ func (p *Pair) GetOrderBookKeys() (sell, buy string) {
 }
 
 func (p *Pair) GetKVPrefix() string {
-	return p.BaseTokenAddress.Hex() + "::" + p.QuoteTokenAddress.Hex()
+	return p.BaseAsset + "::" + p.QuoteAsset
 }
 
 type PairData struct {
-	Pair               PairID   `json:"pair,omitempty" bson:"_id"`
-	Close              *big.Int `json:"close,omitempty" bson:"close"`
-	Count              *big.Int `json:"count,omitempty" bson:"count"`
-	High               *big.Int `json:"high,omitempty" bson:"high"`
-	Low                *big.Int `json:"low,omitempty" bson:"low"`
-	Open               *big.Int `json:"open,omitempty" bson:"open"`
-	Volume             *big.Int `json:"volume,omitempty" bson:"volume"`
-	Timestamp          int64    `json:"timestamp,omitempty" bson:"timestamp"`
-	OrderVolume        *big.Int `json:"orderVolume,omitempty" bson:"orderVolume"`
-	OrderCount         *big.Int `json:"orderCount,omitempty" bson:"orderCount"`
-	AverageOrderAmount *big.Int `json:"averageOrderAmount" bson:"averageOrderAmount"`
-	AverageTradeAmount *big.Int `json:"averageTradeAmount" bson:"averageTradeAmount"`
-	AskPrice           *big.Int `json:"askPrice,omitempty" bson:"askPrice"`
-	BidPrice           *big.Int `json:"bidPrice,omitempty" bson:"bidPrice"`
-	Price              *big.Int `json:"price,omitempty" bson:"price"`
-	Rank               int      `json"rank,omitempty" bson:"rank"`
+	Pair               PairID  `json:"pair,omitempty" bson:"_id"`
+	Close              float64 `json:"close,omitempty" bson:"close"`
+	Count              int64   `json:"count,omitempty" bson:"count"`
+	High               float64 `json:"high,omitempty" bson:"high"`
+	Low                float64 `json:"low,omitempty" bson:"low"`
+	Open               float64 `json:"open,omitempty" bson:"open"`
+	Volume             int64   `json:"volume,omitempty" bson:"volume"`
+	Timestamp          int64   `json:"timestamp,omitempty" bson:"timestamp"`
+	OrderVolume        int64   `json:"orderVolume,omitempty" bson:"orderVolume"`
+	OrderCount         int64   `json:"orderCount,omitempty" bson:"orderCount"`
+	AverageOrderAmount int64   `json:"averageOrderAmount" bson:"averageOrderAmount"`
+	AverageTradeAmount int64   `json:"averageTradeAmount" bson:"averageTradeAmount"`
+	AskPrice           float64 `json:"askPrice,omitempty" bson:"askPrice"`
+	BidPrice           float64 `json:"bidPrice,omitempty" bson:"bidPrice"`
+	Price              float64 `json:"price,omitempty" bson:"price"`
+	Rank               int     `json:"rank,omitempty" bson:"rank"`
 }
 
 func (p *PairData) MarshalJSON() ([]byte, error) {
 	pairData := map[string]interface{}{
 		"pair": map[string]interface{}{
 			"pairName":   p.Pair.PairName,
-			"baseToken":  p.Pair.BaseToken.Hex(),
-			"quoteToken": p.Pair.QuoteToken.Hex(),
+			"baseToken":  p.Pair.BaseToken,
+			"quoteToken": p.Pair.QuoteToken,
 		},
 		"timestamp": p.Timestamp,
 		"rank":      p.Rank,
 	}
 
-	if p.Open != nil {
-		pairData["open"] = p.Open.String()
+	if p.Open != 0 {
+		pairData["open"] = p.Open
 	}
 
-	if p.High != nil {
-		pairData["high"] = p.High.String()
+	if p.High != 0 {
+		pairData["high"] = p.High
 	}
 
-	if p.Low != nil {
-		pairData["low"] = p.Low.String()
+	if p.Low != 0 {
+		pairData["low"] = p.Low
 	}
 
-	if p.Volume != nil {
-		pairData["volume"] = p.Volume.String()
+	if p.Volume != 0 {
+		pairData["volume"] = p.Volume
 	}
 
-	if p.Close != nil {
-		pairData["close"] = p.Close.String()
+	if p.Close != 0 {
+		pairData["close"] = p.Close
 	}
 
-	if p.Count != nil {
-		pairData["count"] = p.Count.String()
+	if p.Count != 0 {
+		pairData["count"] = p.Count
 	}
 
-	if p.OrderVolume != nil {
-		pairData["orderVolume"] = p.OrderVolume.String()
+	if p.OrderVolume != 0 {
+		pairData["orderVolume"] = p.OrderVolume
 	}
 
-	if p.OrderCount != nil {
-		pairData["orderCount"] = p.OrderCount.String()
+	if p.OrderCount != 0 {
+		pairData["orderCount"] = p.OrderCount
 	}
 
-	if p.AverageOrderAmount != nil {
-		pairData["averageOrderAmount"] = p.AverageOrderAmount.String()
+	if p.AverageOrderAmount != 0 {
+		pairData["averageOrderAmount"] = p.AverageOrderAmount
 	}
 
-	if p.AverageTradeAmount != nil {
-		pairData["averageTradeAmount"] = p.AverageTradeAmount.String()
+	if p.AverageTradeAmount != 0 {
+		pairData["averageTradeAmount"] = p.AverageTradeAmount
 	}
 
-	if p.AskPrice != nil {
-		pairData["askPrice"] = p.AskPrice.String()
+	if p.AskPrice != 0 {
+		pairData["askPrice"] = p.AskPrice
 	}
 
-	if p.BidPrice != nil {
-		pairData["bidPrice"] = p.BidPrice.String()
+	if p.BidPrice != 0 {
+		pairData["bidPrice"] = p.BidPrice
 	}
 
-	if p.Price != nil {
-		pairData["price"] = p.Price.String()
+	if p.Price != 0 {
+		pairData["price"] = p.Price
 	}
 
 	bytes, err := json.Marshal(pairData)
 	return bytes, err
 }
 
-func (p *PairData) AddressCode() string {
-	code := p.Pair.BaseToken.Hex() + "::" + p.Pair.QuoteToken.Hex()
+func (p *PairData) AssetCode() string {
+	code := p.Pair.BaseToken + "::" + p.Pair.QuoteToken
 	return code
 }
 
@@ -347,13 +322,13 @@ func (p *PairData) AddressCode() string {
 func (p *PairData) ToSimplifiedAPIData(pair *Pair) *SimplifiedPairAPIData {
 	pairAPIData := SimplifiedPairAPIData{}
 	pairAPIData.PairName = p.Pair.PairName
-	pairAPIData.LastPrice = pair.ParsePricePoint(p.Close)
+	pairAPIData.LastPrice = pair.ParsePrice(p.Close)
 	pairAPIData.Volume = pair.ParseAmount(p.Volume)
 	pairAPIData.OrderVolume = pair.ParseAmount(p.OrderVolume)
 	pairAPIData.AverageOrderAmount = pair.ParseAmount(p.AverageOrderAmount)
 	pairAPIData.AverageTradeAmount = pair.ParseAmount(p.AverageTradeAmount)
-	pairAPIData.TradeCount = int(p.Count.Int64())
-	pairAPIData.OrderCount = int(p.OrderCount.Int64())
+	pairAPIData.TradeCount = int(p.Count)
+	pairAPIData.OrderCount = int(p.OrderCount)
 
 	return &pairAPIData
 }
@@ -361,20 +336,20 @@ func (p *PairData) ToSimplifiedAPIData(pair *Pair) *SimplifiedPairAPIData {
 func (p *PairData) ToAPIData(pair *Pair) *PairAPIData {
 	pairAPIData := PairAPIData{}
 	pairAPIData.Pair = p.Pair
-	pairAPIData.Open = pair.ParsePricePoint(p.Open)
-	pairAPIData.High = pair.ParsePricePoint(p.High)
-	pairAPIData.Low = pair.ParsePricePoint(p.Low)
-	pairAPIData.Close = pair.ParsePricePoint(p.Close)
+	pairAPIData.Open = pair.ParsePrice(p.Open)
+	pairAPIData.High = pair.ParsePrice(p.High)
+	pairAPIData.Low = pair.ParsePrice(p.Low)
+	pairAPIData.Close = pair.ParsePrice(p.Close)
 	pairAPIData.Volume = pair.ParseAmount(p.Volume)
 	pairAPIData.Timestamp = int(p.Timestamp)
 	pairAPIData.OrderVolume = pair.ParseAmount(p.OrderVolume)
-	pairAPIData.OrderCount = int(p.OrderCount.Int64())
-	pairAPIData.TradeCount = int(p.Count.Int64())
+	pairAPIData.OrderCount = int(p.OrderCount)
+	pairAPIData.TradeCount = int(p.Count)
 	pairAPIData.AverageOrderAmount = pair.ParseAmount(p.AverageOrderAmount)
 	pairAPIData.AverageTradeAmount = pair.ParseAmount(p.AverageTradeAmount)
-	pairAPIData.AskPrice = pair.ParsePricePoint(p.AskPrice)
-	pairAPIData.BidPrice = pair.ParsePricePoint(p.BidPrice)
-	pairAPIData.Price = pair.ParsePricePoint(p.Price)
+	pairAPIData.AskPrice = pair.ParsePrice(p.AskPrice)
+	pairAPIData.BidPrice = pair.ParsePrice(p.BidPrice)
+	pairAPIData.Price = pair.ParsePrice(p.Price)
 	pairAPIData.Rank = p.Rank
 
 	return &pairAPIData

@@ -4,10 +4,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -36,7 +36,7 @@ func (s *OHLCVService) Subscribe(conn *ws.Client, p *types.SubscriptionPayload) 
 	socket := ws.GetOHLCVSocket()
 
 	ohlcv, err := s.GetOHLCV(
-		[]types.PairAddresses{types.PairAddresses{BaseToken: p.BaseToken, QuoteToken: p.QuoteToken}},
+		[]types.PairAssets{types.PairAssets{BaseToken: p.BaseToken, QuoteToken: p.QuoteToken}},
 		p.Duration,
 		p.Units,
 		p.From,
@@ -66,7 +66,7 @@ func (s *OHLCVService) Subscribe(conn *ws.Client, p *types.SubscriptionPayload) 
 // duration: in integer
 // unit: sec,min,hour,day,week,month,yr
 // timeInterval: 0-2 entries (0 argument: latest data,1st argument: from timestamp, 2nd argument: to timestamp)
-func (s *OHLCVService) GetOHLCV(pairs []types.PairAddresses, duration int64, unit string, timeInterval ...int64) ([]*types.Tick, error) {
+func (s *OHLCVService) GetOHLCV(pairs []types.PairAssets, duration int64, unit string, timeInterval ...int64) ([]*types.Tick, error) {
 	match := make(bson.M)
 	addFields := make(bson.M)
 	res := make([]*types.Tick, 0)
@@ -103,13 +103,13 @@ func (s *OHLCVService) GetOHLCV(pairs []types.PairAddresses, duration int64, uni
 	return res, nil
 }
 
-func getMatchQuery(start, end time.Time, pairs ...types.PairAddresses) bson.M {
+func getMatchQuery(start, end time.Time, pairs ...types.PairAssets) bson.M {
 	match := bson.M{
 		"createdAt": bson.M{
 			"$gte": start,
 			"$lt":  end,
 		},
-		"status": bson.M{"$in": []string{"SUCCESS"}},
+		"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 	}
 
 	if len(pairs) >= 1 {
@@ -119,8 +119,8 @@ func getMatchQuery(start, end time.Time, pairs ...types.PairAddresses) bson.M {
 			or = append(or, bson.M{
 				"$and": []bson.M{
 					{
-						"baseToken":  pair.BaseToken.Hex(),
-						"quoteToken": pair.QuoteToken.Hex(),
+						"baseToken":  pair.BaseToken,
+						"quoteToken": pair.QuoteToken,
 					},
 				},
 			},
@@ -183,14 +183,14 @@ func getGroupAddFieldBson(key, units string, duration int64) (bson.M, bson.M) {
 		date = key
 	}
 
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 	group = bson.M{
-		"count":  bson.M{"$sum": one},
-		"high":   bson.M{"$max": "$pricepoint"},
-		"low":    bson.M{"$min": "$pricepoint"},
-		"open":   bson.M{"$first": "$pricepoint"},
-		"close":  bson.M{"$last": "$pricepoint"},
-		"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+		"count":  bson.M{"$sum": 1},
+		"high":   bson.M{"$max": "$price"},
+		"low":    bson.M{"$min": "$price"},
+		"open":   bson.M{"$first": "$price"},
+		"close":  bson.M{"$last": "$price"},
+		"volume": bson.M{"$sum": "$amount"},
 	}
 
 	groupID := make(bson.M)

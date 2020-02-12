@@ -3,12 +3,12 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/services"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/services"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
 	"github.com/gorilla/mux"
 )
 
@@ -22,9 +22,12 @@ func ServeTokenResource(
 	tokenService interfaces.TokenService,
 ) {
 	e := &tokenEndpoint{tokenService}
+	r.UseEncodedPath()
 	r.HandleFunc("/tokens/base", e.HandleGetBaseTokens).Methods("GET")
 	r.HandleFunc("/tokens/quote", e.HandleGetQuoteTokens).Methods("GET")
-	r.HandleFunc("/tokens/{address}", e.HandleGetToken).Methods("GET")
+	r.HandleFunc("/tokens/{asset}", e.HandleGetToken).Methods("GET")
+	//	r.HandleFunc("/tokens/{asset}", e.HandleCreateToken).Methods("POST")
+	r.HandleFunc("/tokens/check/{asset}", e.HandleCheckToken).Methods("GET")
 	r.HandleFunc("/tokens", e.HandleGetTokens).Methods("GET")
 	r.HandleFunc("/tokens", e.HandleCreateTokens).Methods("POST")
 }
@@ -37,6 +40,7 @@ func (e *tokenEndpoint) HandleCreateTokens(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid payload")
+		return
 	}
 
 	defer r.Body.Close()
@@ -90,6 +94,7 @@ func (e *tokenEndpoint) HandleGetQuoteTokens(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")
+		return
 	}
 
 	httputils.WriteJSON(w, http.StatusOK, res)
@@ -122,13 +127,18 @@ func (e *tokenEndpoint) HandleGetBaseTokens(w http.ResponseWriter, r *http.Reque
 func (e *tokenEndpoint) HandleGetToken(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	a := vars["address"]
-	if !common.IsHexAddress(a) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Address")
+	asset, err := url.PathUnescape(vars["asset"])
+	logger.Info("HandleGetToken", asset)
+	if err != nil {
+		httputils.WriteError(w, http.StatusBadRequest, "PathUnescape: "+err.Error())
+		return
+	}
+	if !isValidAsset(asset) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Asset "+asset)
+		return
 	}
 
-	tokenAddress := common.HexToAddress(a)
-	res, err := e.tokenService.GetByAddress(tokenAddress)
+	res, err := e.tokenService.GetByAsset(asset)
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")
@@ -137,3 +147,61 @@ func (e *tokenEndpoint) HandleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	httputils.WriteJSON(w, http.StatusOK, res)
 }
+
+func (e *tokenEndpoint) HandleCheckToken(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	asset, err := url.PathUnescape(vars["asset"])
+	if err != nil {
+		httputils.WriteError(w, http.StatusBadRequest, "PathUnescape: "+err.Error())
+		return
+	}
+	logger.Info("HandleCheckToken", asset)
+	if !isValidAsset(asset) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Asset")
+		return
+	}
+
+	t, err := e.tokenService.CheckByAsset(asset)
+	if err != nil {
+		logger.Error(err)
+		httputils.WriteError(w, http.StatusInternalServerError, "")
+		return
+	}
+
+	httputils.WriteJSON(w, http.StatusOK, t)
+}
+
+/*
+func (e *tokenEndpoint) HandleCreateToken(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	asset := vars["asset"]
+	if !isValidAsset(asset) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Asset")
+	}
+
+	t, err := e.tokenService.CheckByAsset(asset)
+	if err != nil {
+		logger.Error(err)
+		httputils.WriteError(w, http.StatusInternalServerError, "")
+		return
+	}
+
+	defer r.Body.Close()
+
+	err = e.tokenService.Create(t)
+	if err != nil {
+		if err == services.ErrTokenExists {
+			httputils.WriteError(w, http.StatusBadRequest, "")
+			return
+		} else {
+			logger.Error(err)
+			httputils.WriteError(w, http.StatusInternalServerError, "")
+			return
+		}
+	}
+
+	httputils.WriteJSON(w, http.StatusCreated, t)
+}
+*/

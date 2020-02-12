@@ -1,8 +1,8 @@
 package testdata
 
 import (
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/daos"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/daos"
 )
 
 func init() {

@@ -19,3 +19,9 @@ func (m *OperatorMessage) String() string {
 type PendingTradeBatch struct {
 	Matches *Matches
 }
+
+type ExchangeLogError struct {
+	ErrorId        uint8
+	MakerOrderHash string
+	TakerOrderHash string
+}

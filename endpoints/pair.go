@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/services"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/services"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
 	"github.com/gorilla/mux"
 )
 
@@ -43,7 +41,7 @@ func (e *pairEndpoint) HandleCreatePairs(w http.ResponseWriter, r *http.Request)
 
 	defer r.Body.Close()
 
-	pairs, err := e.pairService.CreatePairs(token.Address)
+	pairs, err := e.pairService.CreatePairs(token.Asset)
 	if err != nil {
 		switch err {
 		case services.ErrPairExists:
@@ -58,8 +56,8 @@ func (e *pairEndpoint) HandleCreatePairs(w http.ResponseWriter, r *http.Request)
 		case services.ErrQuoteTokenInvalid:
 			httputils.WriteError(w, http.StatusBadRequest, "Quote token invalid (token is not registered as quote)")
 			return
-		case services.ErrNoContractCode:
-			httputils.WriteError(w, http.StatusBadRequest, "Contract not found at given address")
+		case services.ErrNoAsset:
+			httputils.WriteError(w, http.StatusBadRequest, "Asset not found")
 			return
 		default:
 			logger.Error(err)
@@ -90,7 +88,7 @@ func (e *pairEndpoint) HandleCreatePair(w http.ResponseWriter, r *http.Request) 
 
 	defer r.Body.Close()
 
-	err = p.ValidateAddresses()
+	err = p.ValidateAssets()
 	if err != nil {
 		httputils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -111,8 +109,8 @@ func (e *pairEndpoint) HandleCreatePair(w http.ResponseWriter, r *http.Request) 
 		case services.ErrQuoteTokenInvalid:
 			httputils.WriteError(w, http.StatusBadRequest, "Quote token invalid (token is not registered as quote")
 			return
-		case services.ErrNoContractCode:
-			httputils.WriteError(w, http.StatusBadRequest, "Contract not found at given address")
+		case services.ErrNoAsset:
+			httputils.WriteError(w, http.StatusBadRequest, "Asset not found")
 			return
 		default:
 			logger.Error(err)
@@ -168,19 +166,19 @@ func (e *pairEndpoint) HandleGetPair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !common.IsHexAddress(baseToken) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Address")
+	if !isValidAsset(baseToken) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Asset")
 		return
 	}
 
-	if !common.IsHexAddress(quoteToken) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Address")
+	if !isValidAsset(quoteToken) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Asset")
 		return
 	}
 
-	baseTokenAddress := common.HexToAddress(baseToken)
-	quoteTokenAddress := common.HexToAddress(quoteToken)
-	res, err := e.pairService.GetByTokenAddress(baseTokenAddress, quoteTokenAddress)
+	baseAsset := baseToken
+	quoteAsset := quoteToken
+	res, err := e.pairService.GetByAsset(baseAsset, quoteAsset)
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")
@@ -271,20 +269,20 @@ func (e *pairEndpoint) HandleGetPairData(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !common.IsHexAddress(baseToken) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Address")
+	if !isValidAsset(baseToken) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Base Token Asset")
 		return
 	}
 
-	if !common.IsHexAddress(quoteToken) {
-		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Address")
+	if !isValidAsset(quoteToken) {
+		httputils.WriteError(w, http.StatusBadRequest, "Invalid Quote Token Asset")
 		return
 	}
 
-	baseTokenAddress := common.HexToAddress(baseToken)
-	quoteTokenAddress := common.HexToAddress(quoteToken)
+	baseAsset := baseToken
+	quoteAsset := quoteToken
 
-	res, err := e.pairService.GetTokenPairData(baseTokenAddress, quoteTokenAddress)
+	res, err := e.pairService.GetTokenPairData(baseAsset, quoteAsset)
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")

@@ -1,54 +1,52 @@
 package services
 
 import (
-	"math/big"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/rabbitmq"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils/mocks"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"github.com/byteball/odex-backend/utils/testutils/mocks"
 )
 
-func TestCancelTrades(t *testing.T) {
+func TestCancelOrder(t *testing.T) {
 	orderDao := new(mocks.OrderDao)
 	pairDao := new(mocks.PairDao)
 	accountDao := new(mocks.AccountDao)
 	tradeDao := new(mocks.TradeDao)
 	engine := new(mocks.Engine)
-	ethereum := new(mocks.EthereumProvider)
+	validator := new(mocks.ValidatorService)
 
-	amqp := rabbitmq.InitConnection("amqp://guest:guest@localhost:5672/")
+	//amqp := rabbitmq.InitConnection("amqp://guest:guest@localhost:5672/")
+	amqp := rabbitmq.InitConnection(app.Config.RabbitMQURL)
 	orderService := NewOrderService(
 		orderDao,
 		pairDao,
 		accountDao,
 		tradeDao,
 		engine,
-		ethereum,
+		validator,
 		amqp,
 	)
 
-	t1 := testutils.GetTestTrade1()
-	t2 := testutils.GetTestTrade2()
-	o1 := testutils.GetTestOrder1()
-	o2 := testutils.GetTestOrder2()
+	o := testutils.GetTestOrder1()
 
-	trades := []*types.Trade{&t1, &t2}
-	hashes := []common.Hash{t1.OrderHash, t2.OrderHash}
-	amounts := []*big.Int{t1.Amount, t2.Amount}
-	orders := []*types.Order{&o1, &o2}
-
-	orderDao.On("GetByHashes", hashes).Return(orders, nil)
-	engine.On("CancelTrades", orders, amounts).Return(nil)
-
-	err := orderService.CancelTrades(trades)
-	if err != nil {
-		t.Error("Could not cancel trades", err)
+	oc := &types.OrderCancel{
+		OrderHash:   o.Hash,
+		UserAddress: o.UserAddress,
 	}
 
-	orderDao.AssertCalled(t, "GetByHashes", hashes)
-	engine.AssertCalled(t, "CancelTrades", orders, amounts)
+	orderDao.On("GetByHash", o.Hash).Return(&o, nil)
+	engine.On("CancelOrder", oc).Return(nil)
+
+	err := orderService.CancelOrder(oc)
+	if err != nil {
+		t.Error("Could not cancel order", err)
+	}
+
+	orderDao.AssertCalled(t, "GetByHash", o.Hash)
+	//engine.AssertNumberOfCalls(t, "CancelOrder", 1)
+	//engine.AssertCalled(t, "handleCancelOrder")
 }

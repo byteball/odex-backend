@@ -1,17 +1,16 @@
 package testutils
 
 import (
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
 )
 
 func GetZRXWETHTestPair() *types.Pair {
 	return &types.Pair{
 		BaseTokenSymbol:    "ZRX",
-		BaseTokenAddress:   common.HexToAddress("0x2034842261b82651885751fc293bba7ba5398156"),
+		BaseAsset:   "0x2034842261b82651885751fc293bba7ba5398156",
 		BaseTokenDecimals:  18,
 		QuoteTokenSymbol:   "WETH",
-		QuoteTokenAddress:  common.HexToAddress("0x276e16ada4b107332afd776691a7fbbaede168ef"),
+		QuoteAsset:  "0x276e16ada4b107332afd776691a7fbbaede168ef",
 		QuoteTokenDecimals: 18,
 	}
 }

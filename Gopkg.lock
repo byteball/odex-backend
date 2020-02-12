@@ -2,6 +2,37 @@
 
 
 [[projects]]
+  branch = "develop"
+  digest = "1:358748c5ba5d3611b524ec968954571054584f96a5e57d8b0c96725228a72fb0"
+  name = "github.com/byteball/odex-backend"
+  packages = [
+    "app",
+    "contracts",
+    "contracts/contractsinterfaces",
+    "crons",
+    "daos",
+    "endpoints",
+    "engine",
+    "errors",
+    "ethereum",
+    "interfaces",
+    "operator",
+    "rabbitmq",
+    "server",
+    "services",
+    "types",
+    "utils",
+    "utils/httputils",
+    "utils/math",
+    "utils/testutils",
+    "utils/testutils/mocks",
+    "utils/units",
+    "ws",
+  ]
+  pruneopts = "T"
+  revision = "2c32341b26c192281c8089e75d2a9a5b8c61b599"
+
+[[projects]]
   branch = "master"
   digest = "1:7afff364b8e5e9f1085fe77ae5630b8e0f7482338a50535881aa0b433e48fb0b"
   name = "github.com/alicebob/gopher-json"
@@ -121,6 +152,7 @@
   packages = [
     ".",
     "bson",
+    "dbtest",
     "internal/json",
     "internal/sasl",
     "internal/scram",
@@ -264,45 +296,6 @@
   pruneopts = "T"
   revision = "fa473d140ef3c6adf42d6b391fe76707f1f243c8"
   version = "v1.0.0"
-
-[[projects]]
-  digest = "1:f690f4e68b04af81843940ef5400d2dd46da23804d791f2cb78e00aea980b20c"
-  name = "github.com/mongodb/mongo-go-driver"
-  packages = [
-    "bson",
-    "bson/bsoncodec",
-    "bson/bsonrw",
-    "bson/bsontype",
-    "bson/primitive",
-    "event",
-    "internal",
-    "mongo",
-    "mongo/options",
-    "mongo/readconcern",
-    "mongo/readpref",
-    "mongo/writeconcern",
-    "tag",
-    "version",
-    "x/bsonx",
-    "x/bsonx/bsoncore",
-    "x/mongo/driver",
-    "x/mongo/driver/auth",
-    "x/mongo/driver/auth/internal/gssapi",
-    "x/mongo/driver/session",
-    "x/mongo/driver/topology",
-    "x/mongo/driver/uuid",
-    "x/network/address",
-    "x/network/command",
-    "x/network/compressor",
-    "x/network/connection",
-    "x/network/connstring",
-    "x/network/description",
-    "x/network/result",
-    "x/network/wiremessage",
-  ]
-  pruneopts = "T"
-  revision = "29905d4bda472574c8b499e2f93b5b2747d8fbd7"
-  version = "v0.1.0"
 
 [[projects]]
   branch = "master"
@@ -461,22 +454,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fb87ad6629b8ae41bdf7bec0a22cc4a5553ab550b4a52c88edacfbfe61ffd87d"
-  name = "github.com/xdg/scram"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "7eeb5667e42c09cb51bf7b7c28aea8c56767da90"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f5c1d04bc09c644c592b45b9f0bad4030521b1a7d11c7dadbb272d9439fa6e8e"
-  name = "github.com/xdg/stringprep"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "73f8eece6fdcd902c185bf651de50f3828bed5ed"
-
-[[projects]]
-  branch = "master"
   digest = "1:afd95c12c4ae9bf890c277401e42ee3394cb5ad86881fbdc05c773650501db85"
   name = "github.com/yuin/gopher-lua"
   packages = [
@@ -512,14 +489,6 @@
   ]
   pruneopts = "T"
   revision = "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:6932d1ef4294f3ea819748e89d1003f5df3804b20b84b5f1c60f8f1d7c933e2d"
-  name = "golang.org/x/sync"
-  packages = ["semaphore"]
-  pruneopts = "T"
-  revision = "37e7f081c4d4c64e13b10787722085407fe5d15f"
 
 [[projects]]
   branch = "master"
@@ -569,21 +538,6 @@
 
 [[projects]]
   branch = "v2"
-  digest = "1:5c50eb6a2415f6e901e59aaa493a2b170a4d798dab306c9ab2ca1e694aecff78"
-  name = "gopkg.in/mgo.v2"
-  packages = [
-    ".",
-    "bson",
-    "dbtest",
-    "internal/json",
-    "internal/sasl",
-    "internal/scram",
-  ]
-  pruneopts = "T"
-  revision = "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
-
-[[projects]]
-  branch = "v2"
   digest = "1:3d3f9391ab615be8655ae0d686a1564f3fec413979bb1aaf018bac1ec1bb1cc7"
   name = "gopkg.in/natefinch/npipe.v2"
   packages = ["."]
@@ -610,6 +564,28 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/byteball/odex-backend/app",
+    "github.com/byteball/odex-backend/contracts",
+    "github.com/byteball/odex-backend/contracts/contractsinterfaces",
+    "github.com/byteball/odex-backend/crons",
+    "github.com/byteball/odex-backend/daos",
+    "github.com/byteball/odex-backend/endpoints",
+    "github.com/byteball/odex-backend/engine",
+    "github.com/byteball/odex-backend/errors",
+    "github.com/byteball/odex-backend/ethereum",
+    "github.com/byteball/odex-backend/interfaces",
+    "github.com/byteball/odex-backend/operator",
+    "github.com/byteball/odex-backend/rabbitmq",
+    "github.com/byteball/odex-backend/server",
+    "github.com/byteball/odex-backend/services",
+    "github.com/byteball/odex-backend/types",
+    "github.com/byteball/odex-backend/utils",
+    "github.com/byteball/odex-backend/utils/httputils",
+    "github.com/byteball/odex-backend/utils/math",
+    "github.com/byteball/odex-backend/utils/testutils",
+    "github.com/byteball/odex-backend/utils/testutils/mocks",
+    "github.com/byteball/odex-backend/utils/units",
+    "github.com/byteball/odex-backend/ws",
     "github.com/alicebob/miniredis",
     "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts/abi",
@@ -624,6 +600,8 @@
     "github.com/ethereum/go-ethereum/event",
     "github.com/ethereum/go-ethereum/rpc",
     "github.com/globalsign/mgo",
+    "github.com/globalsign/mgo/bson",
+    "github.com/globalsign/mgo/dbtest",
     "github.com/go-ozzo/ozzo-routing",
     "github.com/go-ozzo/ozzo-validation",
     "github.com/go-test/deep",
@@ -631,8 +609,6 @@
     "github.com/gorilla/handlers",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
-    "github.com/mongodb/mongo-go-driver/mongo",
-    "github.com/mongodb/mongo-go-driver/mongo/options",
     "github.com/op/go-logging",
     "github.com/posener/wstest",
     "github.com/robfig/cron",
@@ -641,9 +617,6 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "golang.org/x/crypto/acme/autocert",
-    "gopkg.in/mgo.v2",
-    "gopkg.in/mgo.v2/bson",
-    "gopkg.in/mgo.v2/dbtest",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/types"
 )
 
 func (c *Connection) SubscribeOrders(fn func(*Message) error) error {
@@ -134,7 +134,7 @@ func (c *Connection) PublishCancelOrderMessage(o *types.Order) error {
 	return nil
 }
 
-func (c *Connection) PublishInvalidateMakerOrdersMessage(m types.Matches) error {
+/*func (c *Connection) PublishInvalidateMakerOrdersMessage(m types.Matches) error {
 	b, err := json.Marshal(m)
 	if err != nil {
 		logger.Error(err)
@@ -152,9 +152,9 @@ func (c *Connection) PublishInvalidateMakerOrdersMessage(m types.Matches) error 
 	}
 
 	return nil
-}
+}*/
 
-func (c *Connection) PublishInvalidateTakerOrdersMessage(m types.Matches) error {
+/*func (c *Connection) PublishInvalidateTakerOrdersMessage(m types.Matches) error {
 	b, err := json.Marshal(m)
 	if err != nil {
 		logger.Error(err)
@@ -172,7 +172,7 @@ func (c *Connection) PublishInvalidateTakerOrdersMessage(m types.Matches) error 
 	}
 
 	return nil
-}
+}*/
 
 func (c *Connection) PublishOrder(order *Message) error {
 	ch := c.GetChannel("orderPublish")

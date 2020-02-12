@@ -4,27 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"math/big"
 	"sort"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/daos"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/daos"
+	"github.com/byteball/odex-backend/types"
 	"github.com/globalsign/mgo/bson"
+	"github.com/stretchr/testify/assert"
 )
 
 const timeLayoutString = "Jan 2 2006 15:04:05"
 
 type TickSorter []*types.Tick
 
-func (a TickSorter) Len() int           { return len(a) }
-func (a TickSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a TickSorter) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
+func (a TickSorter) Len() int      { return len(a) }
+func (a TickSorter) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func (a TickSorter) Less(i, j int) bool { return a[i].Timestamp < a[j].Timestamp }
 
 var durations = map[string][]int64{
 	"year":  {1},
@@ -79,27 +78,27 @@ var testTimes = []string{
 var durationMap = make(map[string]map[int64]*types.Tick)
 
 func TestOHLCV(t *testing.T) {
-	pair := types.PairAddresses{
+	pair := types.PairAssets{
 		Name:       "HPC/AUT",
-		BaseToken:  common.HexToAddress("0x2034842261b82651885751fc293bba7ba5398156"),
-		QuoteToken: common.HexToAddress("0x1888a8db0b7db59413ce07150b3373972bf818d3"),
+		BaseToken:  "0x2034842261b82651885751fc293bba7ba5398156",
+		QuoteToken: "0x1888a8db0b7db59413ce07150b3373972bf818d3",
 	}
 
 	sampleTrade := types.Trade{
-		Taker:          common.HexToAddress("0xefD7eB287CeeFCE8256Dd46e25F398acEA7C4b63"),
-		Maker:          common.HexToAddress("0xefD7eB287CeeFCE8256Dd46e25F398acEA7C4b58"),
+		Taker:          "0xefD7eB287CeeFCE8256Dd46e25F398acEA7C4b63",
+		Maker:          "0xefD7eB287CeeFCE8256Dd46e25F398acEA7C4b58",
 		BaseToken:      pair.BaseToken,
 		QuoteToken:     pair.QuoteToken,
-		MakerOrderHash: common.HexToHash("0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efead7c"),
-		TakerOrderHash: common.HexToHash("0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efead7c"),
-		Hash:           common.HexToHash("0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efeas3f"),
+		MakerOrderHash: "0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efead7c",
+		TakerOrderHash: "0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efead7c",
+		Hash:           "0x4ac68946450e5a6273b92d81aa58f288d7b5515942456b89fb5c7e982efeas3f",
 		PairName:       pair.Name,
-		Signature:      &types.Signature{},
-		Side:           "BUY",
-		PricePoint:     big.NewInt(9987),
-		Amount:         big.NewInt(125772),
+		//Side:           "BUY",
+		Price:  9987,
+		Amount: 125772,
+		Status: "SUCCESS",
 	}
-	app.Config.DBName = "proofdex"
+	app.Config.DBName = "odex"
 	tradeDao := daos.NewTradeDao()
 	ohlcvService := NewOHLCVService(tradeDao)
 
@@ -108,11 +107,10 @@ func TestOHLCV(t *testing.T) {
 		if err != nil {
 			panic("invalid date: " + err.Error())
 		}
-		amt := new(big.Int)
-		prc := new(big.Int)
 		sampleTrade.CreatedAt = tTime
-		sampleTrade.Amount = amt.Add(sampleTrade.Amount, big.NewInt(10))
-		sampleTrade.PricePoint = prc.Add(sampleTrade.PricePoint, big.NewInt(5))
+		sampleTrade.Amount = sampleTrade.Amount + 10
+		sampleTrade.Price = sampleTrade.Price + 5
+		sampleTrade.MakerOrderHash = sampleTrade.MakerOrderHash + "5"
 		sampleTrade.ID = bson.NewObjectId()
 		sampleTrade.Hash = sampleTrade.ComputeHash()
 
@@ -128,7 +126,7 @@ func TestOHLCV(t *testing.T) {
 
 	for unit, durationSlice := range durations {
 		for _, duration := range durationSlice {
-			response, err := ohlcvService.GetOHLCV([]types.PairAddresses{pair}, duration, unit, 0, time.Now().Unix())
+			response, err := ohlcvService.GetOHLCV([]types.PairAssets{pair}, duration, unit, 0, time.Now().Unix())
 			if err != nil {
 				t.Errorf("%s", err)
 				return
@@ -198,31 +196,29 @@ func addTick(unit string, duration int64, ts int64, trade *types.Trade) {
 func tradeToTick(trade *types.Trade, tick *types.Tick, ts int64) *types.Tick {
 	if tick == nil {
 		tick = &types.Tick{
-			ID: types.TickID{
-				Pair:       trade.PairName,
+			Pair: types.PairID{
+				PairName:   trade.PairName,
 				BaseToken:  trade.BaseToken,
 				QuoteToken: trade.QuoteToken,
 			},
-			O:     trade.PricePoint,
-			H:     trade.PricePoint,
-			L:     trade.PricePoint,
-			C:     trade.PricePoint,
-			V:     trade.Amount,
-			Count: big.NewInt(1),
-			Ts:    ts * 1000,
+			Open:      trade.Price,
+			High:      trade.Price,
+			Low:       trade.Price,
+			Close:     trade.Price,
+			Volume:    trade.Amount,
+			Count:     1,
+			Timestamp: ts * 1000,
 		}
 	} else {
-		tick.C = trade.PricePoint
-		tv := new(big.Int)
-		tv.Add(tick.V, trade.Amount)
-		tick.V = tv
+		tick.Close = trade.Price
+		tick.Volume = tick.Volume + trade.Amount
 
-		tick.Count.Add(tick.Count, big.NewInt(1))
-		if trade.PricePoint.Cmp(tick.H) == 1 {
-			tick.H = trade.PricePoint
+		tick.Count++
+		if trade.Price > tick.High {
+			tick.High = trade.Price
 		}
-		if trade.PricePoint.Cmp(tick.L) == -1 {
-			tick.L = trade.PricePoint
+		if trade.Price < tick.Low {
+			tick.Low = trade.Price
 		}
 	}
 	return tick

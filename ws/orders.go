@@ -1,9 +1,5 @@
 package ws
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-)
-
 // OrderConn is websocket order connection struct
 // It holds the reference to connection and the channel of type OrderMessage
 
@@ -12,26 +8,26 @@ type OrderConnection []*Client
 var orderConnections map[string]OrderConnection
 
 // GetOrderConn returns the connection associated with an order ID
-func GetOrderConnections(a common.Address) OrderConnection {
-	c := orderConnections[a.Hex()]
+func GetOrderConnections(address string) OrderConnection {
+	c := orderConnections[address]
 	if c == nil {
-		logger.Warning("No connection found")
+		logger.Warning("No connection found for address", address)
 		return nil
 	}
 
-	return orderConnections[a.Hex()]
+	return orderConnections[address]
 }
 
-func OrderSocketUnsubscribeHandler(a common.Address) func(client *Client) {
+func OrderSocketUnsubscribeHandler(a string) func(client *Client) {
 	return func(client *Client) {
 		logger.Info("In unsubscription handler")
-		orderConnection := orderConnections[a.Hex()]
+		orderConnection := orderConnections[a]
 		if orderConnection == nil {
 			logger.Info("No subscriptions")
 		}
 
 		if orderConnection != nil {
-			logger.Info("%v connections before unsubscription", len(orderConnections[a.Hex()]))
+			logger.Info("%v connections before unsubscription", len(orderConnections[a]))
 			for i, c := range orderConnection {
 				if client == c {
 					orderConnection = append(orderConnection[:i], orderConnection[i+1:]...)
@@ -40,39 +36,39 @@ func OrderSocketUnsubscribeHandler(a common.Address) func(client *Client) {
 
 		}
 
-		orderConnections[a.Hex()] = orderConnection
-		logger.Info("%v connections after unsubscription", len(orderConnections[a.Hex()]))
+		orderConnections[a] = orderConnection
+		logger.Info("%v connections after unsubscription", len(orderConnections[a]))
 	}
 }
 
 // RegisterOrderConnection registers a connection with and orderID.
 // It is called whenever a message is recieved over order channel
-func RegisterOrderConnection(a common.Address, c *Client) {
+func RegisterOrderConnection(a string, c *Client) {
 	logger.Info("Registering new order connection")
 
 	if orderConnections == nil {
 		orderConnections = make(map[string]OrderConnection)
 	}
 
-	if orderConnections[a.Hex()] == nil {
+	if orderConnections[a] == nil {
 		logger.Info("Registering a new order connection")
-		orderConnections[a.Hex()] = OrderConnection{c}
+		orderConnections[a] = OrderConnection{c}
 		RegisterConnectionUnsubscribeHandler(c, OrderSocketUnsubscribeHandler(a))
-		logger.Info("Number of connections for this address: %v", len(orderConnections))
+		logger.Info("Number of connections for %s: %v", a, len(orderConnections))
 	}
 
-	if orderConnections[a.Hex()] != nil {
-		if !isClientConnected(a, c) {
+	if orderConnections[a] != nil {
+		if !IsClientConnected(a, c) {
 			logger.Info("Registering a new order connection")
-			orderConnections[a.Hex()] = append(orderConnections[a.Hex()], c)
+			orderConnections[a] = append(orderConnections[a], c)
 			RegisterConnectionUnsubscribeHandler(c, OrderSocketUnsubscribeHandler(a))
-			logger.Info("Number of connections for this address: %v", len(orderConnections))
+			logger.Info("Number of connections for %s: %v", a, len(orderConnections))
 		}
 	}
 }
 
-func isClientConnected(a common.Address, client *Client) bool {
-	for _, c := range orderConnections[a.Hex()] {
+func IsClientConnected(a string, client *Client) bool {
+	for _, c := range orderConnections[a] {
 		if c == client {
 			logger.Info("Client is connected")
 			return true
@@ -83,13 +79,13 @@ func isClientConnected(a common.Address, client *Client) bool {
 	return false
 }
 
-func SendOrderMessage(msgType string, a common.Address, payload interface{}) {
+func SendOrderMessage(msgType string, a string, payload interface{}) {
 	conn := GetOrderConnections(a)
 	if conn == nil {
 		return
 	}
 
 	for _, c := range conn {
-		c.SendMessage(OrderChannel, msgType, payload)
+		go c.SendMessage(OrderChannel, msgType, payload)
 	}
 }

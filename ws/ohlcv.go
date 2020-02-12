@@ -101,7 +101,7 @@ func (s *OHLCVSocket) Unsubscribe(c *Client) {
 	}
 }
 
-// BroadcastOHLCV Message streams message to all the subscribtions subscribed to the pair
+// BroadcastOHLCV Message streams message to all the subscriptions subscribed to the pair
 func (s *OHLCVSocket) BroadcastOHLCV(channelID string, p interface{}) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -117,20 +117,20 @@ func (s *OHLCVSocket) BroadcastOHLCV(channelID string, p interface{}) error {
 
 // SendMessage sends a websocket message on the trade channel
 func (s *OHLCVSocket) SendMessage(c *Client, msgType string, p interface{}) {
-	c.SendMessage(OHLCVChannel, msgType, p)
+	go c.SendMessage(OHLCVChannel, msgType, p)
 }
 
 // SendErrorMessage sends an error message on the trade channel
 func (s *OHLCVSocket) SendErrorMessage(c *Client, p interface{}) {
-	c.SendMessage(OHLCVChannel, "ERROR", p)
+	go c.SendMessage(OHLCVChannel, "ERROR", p)
 }
 
 // SendInitMessage is responsible for sending message on trade ohlcv channel at subscription
 func (s *OHLCVSocket) SendInitMessage(c *Client, p interface{}) {
-	c.SendMessage(OHLCVChannel, "INIT", p)
+	go c.SendMessage(OHLCVChannel, "INIT", p)
 }
 
 // SendUpdateMessage is responsible for sending message on trade ohlcv channel at subscription
 func (s *OHLCVSocket) SendUpdateMessage(c *Client, p interface{}) {
-	c.SendMessage(OHLCVChannel, "UPDATE", p)
+	go c.SendMessage(OHLCVChannel, "UPDATE", p)
 }

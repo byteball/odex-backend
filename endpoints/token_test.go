@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils/mocks"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"github.com/byteball/odex-backend/utils/testutils/mocks"
 	"github.com/gorilla/mux"
 )
 
-func SetupTest() (*mux.Router, *mocks.TokenService) {
+func SetupTokenTest() (*mux.Router, *mocks.TokenService) {
 	r := mux.NewRouter()
 	tokenService := new(mocks.TokenService)
 
@@ -24,14 +24,14 @@ func SetupTest() (*mux.Router, *mocks.TokenService) {
 }
 
 func TestHandleCreateTokens(t *testing.T) {
-	router, tokenService := SetupTest()
+	router, tokenService := SetupTokenTest()
 
 	token := types.Token{
-		Name:            "ZRX",
-		Symbol:          "ZRX",
-		Decimal:         18,
-		Quote:           false,
-		Address: common.HexToAddress("0x1"),
+		//Name:    "ZRX",
+		Symbol:   "ZRX",
+		Decimals: 18,
+		Quote:    false,
+		Asset:    "0x1",
 	}
 
 	tokenService.On("Create", &token).Return(nil)
@@ -49,15 +49,17 @@ func TestHandleCreateTokens(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusCreated)
 	}
 
-	created := types.Token{}
+	created := struct {
+		Data types.Token
+	}{}
 	json.NewDecoder(rr.Body).Decode(&created)
 
 	tokenService.AssertCalled(t, "Create", &token)
-	testutils.CompareToken(t, &token, &created)
+	testutils.CompareToken(t, &token, &created.Data)
 }
 
 func TestHandleGetTokens(t *testing.T) {
-	router, tokenService := SetupTest()
+	router, tokenService := SetupTokenTest()
 
 	t1 := testutils.GetTestZRXToken()
 	t2 := testutils.GetTestWETHToken()
@@ -76,31 +78,33 @@ func TestHandleGetTokens(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := []types.Token{}
+	result := struct {
+		Data []types.Token
+	}{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
 	tokenService.AssertCalled(t, "GetAll")
-	testutils.CompareToken(t, &t1, &result[0])
-	testutils.CompareToken(t, &t2, &result[1])
+	testutils.CompareToken(t, &t1, &result.Data[0])
+	testutils.CompareToken(t, &t2, &result.Data[1])
 }
 
 func TestHandleGetQuoteTokens(t *testing.T) {
-	router, tokenService := SetupTest()
+	router, tokenService := SetupTokenTest()
 
 	t1 := types.Token{
-		Name:            "WETH",
-		Symbol:          "WETH",
-		Decimal:         18,
-		Quote:           true,
-		Address: common.HexToAddress("0x1"),
+		//Name:    "WETH",
+		Symbol:   "WETH",
+		Decimals: 18,
+		Quote:    true,
+		Asset:    "0x1",
 	}
 
 	t2 := types.Token{
-		Name:            "DAI",
-		Symbol:          "DAI",
-		Decimal:         18,
-		Quote:           true,
-		Address: common.HexToAddress("0x2"),
+		//Name:    "DAI",
+		Symbol:   "DAI",
+		Decimals: 18,
+		Quote:    true,
+		Asset:    "0x2",
 	}
 
 	tokenService.On("GetQuoteTokens").Return([]types.Token{t1, t2}, nil)
@@ -117,31 +121,33 @@ func TestHandleGetQuoteTokens(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := []types.Token{}
+	result := struct {
+		Data []types.Token
+	}{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
 	tokenService.AssertCalled(t, "GetQuoteTokens")
-	testutils.CompareToken(t, &t1, &result[0])
-	testutils.CompareToken(t, &t2, &result[1])
+	testutils.CompareToken(t, &t1, &result.Data[0])
+	testutils.CompareToken(t, &t2, &result.Data[1])
 }
 
 func TestHandleGetBaseTokens(t *testing.T) {
-	router, tokenService := SetupTest()
+	router, tokenService := SetupTokenTest()
 
 	t1 := types.Token{
-		Name:            "WETH",
-		Symbol:          "WETH",
-		Decimal:         18,
-		Quote:           false,
-		Address: common.HexToAddress("0x1"),
+		//Name:    "WETH",
+		Symbol:   "WETH",
+		Decimals: 18,
+		Quote:    false,
+		Asset:    "0x1",
 	}
 
 	t2 := types.Token{
-		Name:            "DAI",
-		Symbol:          "DAI",
-		Decimal:         18,
-		Quote:           false,
-		Address: common.HexToAddress("0x2"),
+		//Name:    "DAI",
+		Symbol:   "DAI",
+		Decimals: 18,
+		Quote:    false,
+		Asset:    "0x2",
 	}
 
 	tokenService.On("GetBaseTokens").Return([]types.Token{t1, t2}, nil)
@@ -158,30 +164,32 @@ func TestHandleGetBaseTokens(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := []types.Token{}
+	result := struct {
+		Data []types.Token
+	}{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
 	tokenService.AssertCalled(t, "GetBaseTokens")
-	testutils.CompareToken(t, &t1, &result[0])
-	testutils.CompareToken(t, &t2, &result[1])
+	testutils.CompareToken(t, &t1, &result.Data[0])
+	testutils.CompareToken(t, &t2, &result.Data[1])
 }
 
 func TestHandleGetToken(t *testing.T) {
-	router, tokenService := SetupTest()
+	router, tokenService := SetupTokenTest()
 
-	addr := common.HexToAddress("0x1")
+	asset := "xCI8oRWJFavpgx3Wi7w+9A/0hSaxg3iqkp7h1buMjGc="
 
 	t1 := types.Token{
-		Name:            "DAI",
-		Symbol:          "DAI",
-		Decimal:         18,
-		Quote:           false,
-		Address: addr,
+		//Name:    "DAI",
+		Symbol:   "DAI",
+		Decimals: 18,
+		Quote:    false,
+		Asset:    asset,
 	}
 
-	tokenService.On("GetByAddress", addr).Return(&t1, nil)
+	tokenService.On("GetByAsset", asset).Return(&t1, nil)
 
-	url := "/tokens/" + addr.Hex()
+	url := "/tokens/" + url.PathEscape(asset)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Error(err)
@@ -194,29 +202,31 @@ func TestHandleGetToken(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	result := types.Token{}
+	result := struct {
+		Data types.Token
+	}{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
-	tokenService.AssertCalled(t, "GetByAddress", addr)
-	testutils.Compare(t, &t1, &result)
+	tokenService.AssertCalled(t, "GetByAsset", asset)
+	testutils.Compare(t, &t1, &result.Data)
 }
 
 // func TestHandleGetTokens(t *testing.T) {
-// 	router, tokenService := SetupTest()
+// 	router, tokenService := SetupTokenTest()
 
 // }
 
 // func TestHandleGetQuoteTokens(t *testing.T) {
-// 	router, tokenService := SetupTest()
+// 	router, tokenService := SetupTokenTest()
 
 // }
 
 // func TestHandleGetBaseTokens(t *testing.T) {
-// 	router, tokenService := SetupTest()
+// 	router, tokenService := SetupTokenTest()
 // }
 
 // func TestHandleGetToken(t *testing.T) {
-// 	router, tokenService := SetupTest()
+// 	router, tokenService := SetupTokenTest()
 
 // }
 

@@ -1,13 +1,10 @@
 package services
 
 import (
-	"math/big"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -19,7 +16,7 @@ type PairService struct {
 	tradeDao interfaces.TradeDao
 	orderDao interfaces.OrderDao
 	eng      interfaces.Engine
-	provider interfaces.EthereumProvider
+	provider interfaces.ObyteProvider
 }
 
 // NewPairService returns a new instance of balance service
@@ -29,41 +26,41 @@ func NewPairService(
 	tradeDao interfaces.TradeDao,
 	orderDao interfaces.OrderDao,
 	eng interfaces.Engine,
-	provider interfaces.EthereumProvider,
+	provider interfaces.ObyteProvider,
 ) *PairService {
 
 	return &PairService{pairDao, tokenDao, tradeDao, orderDao, eng, provider}
 }
 
-func (s *PairService) CreatePairs(addr common.Address) ([]*types.Pair, error) {
+func (s *PairService) CreatePairs(asset string) ([]*types.Pair, error) {
 	quotes, err := s.tokenDao.GetQuoteTokens()
 	if err != nil {
 		logger.Error(err)
 		return nil, err
 	}
 
-	base, err := s.tokenDao.GetByAddress(addr)
+	base, err := s.tokenDao.GetByAsset(asset)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
 	}
 
 	if base == nil {
-		symbol, err := s.provider.Symbol(addr)
+		symbol, err := s.provider.Symbol(asset)
 		if err != nil {
 			logger.Error(err)
-			return nil, ErrNoContractCode
+			return nil, ErrNoAsset
 		}
 
-		decimals, err := s.provider.Decimals(addr)
+		decimals, err := s.provider.Decimals(asset)
 		if err != nil {
 			logger.Error(err)
-			return nil, ErrNoContractCode
+			return nil, ErrNoAsset
 		}
 
 		base = &types.Token{
 			Symbol:   symbol,
-			Address:  addr,
+			Asset:    asset,
 			Decimals: int(decimals),
 			Active:   true,
 			Listed:   false,
@@ -79,7 +76,7 @@ func (s *PairService) CreatePairs(addr common.Address) ([]*types.Pair, error) {
 
 	pairs := []*types.Pair{}
 	for _, q := range quotes {
-		p, err := s.pairDao.GetByTokenAddress(addr, q.Address)
+		p, err := s.pairDao.GetByAsset(asset, q.Asset)
 		if err != nil {
 			logger.Error(err)
 			return nil, err
@@ -88,15 +85,13 @@ func (s *PairService) CreatePairs(addr common.Address) ([]*types.Pair, error) {
 		if p == nil {
 			p := types.Pair{
 				QuoteTokenSymbol:   q.Symbol,
-				QuoteTokenAddress:  q.Address,
+				QuoteAsset:         q.Asset,
 				QuoteTokenDecimals: q.Decimals,
 				BaseTokenSymbol:    base.Symbol,
-				BaseTokenAddress:   base.Address,
+				BaseAsset:          base.Asset,
 				BaseTokenDecimals:  base.Decimals,
 				Active:             true,
 				Listed:             false,
-				MakeFee:            q.MakeFee,
-				TakeFee:            q.TakeFee,
 			}
 
 			err := s.pairDao.Create(&p)
@@ -115,7 +110,7 @@ func (s *PairService) CreatePairs(addr common.Address) ([]*types.Pair, error) {
 // Create function is responsible for inserting new pair in DB.
 // It checks for existence of tokens in DB first
 func (s *PairService) Create(pair *types.Pair) error {
-	p, err := s.pairDao.GetByTokenAddress(pair.BaseTokenAddress, pair.QuoteTokenAddress)
+	p, err := s.pairDao.GetByAsset(pair.BaseAsset, pair.QuoteAsset)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -125,7 +120,7 @@ func (s *PairService) Create(pair *types.Pair) error {
 		return ErrPairExists
 	}
 
-	quote, err := s.tokenDao.GetByAddress(pair.QuoteTokenAddress)
+	quote, err := s.tokenDao.GetByAsset(pair.QuoteAsset)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -139,29 +134,30 @@ func (s *PairService) Create(pair *types.Pair) error {
 		return ErrQuoteTokenInvalid
 	}
 
-	base, err := s.tokenDao.GetByAddress(pair.BaseTokenAddress)
+	base, err := s.tokenDao.GetByAsset(pair.BaseAsset)
 	if err != nil {
 		logger.Error(err)
 		return err
 	}
 
 	if base == nil {
-		symbol, err := s.provider.Symbol(pair.BaseTokenAddress)
+		symbol, err := s.provider.Symbol(pair.BaseAsset)
 		if err != nil {
 			logger.Error(err)
-			return ErrNoContractCode
+			return ErrNoAsset
 		}
 
-		decimals, err := s.provider.Decimals(pair.BaseTokenAddress)
+		decimals, err := s.provider.Decimals(pair.BaseAsset)
 		if err != nil {
 			logger.Error(err)
-			return ErrNoContractCode
+			return ErrNoAsset
 		}
 
 		token := types.Token{
 			Symbol:   symbol,
-			Address:  pair.BaseTokenAddress,
+			Asset:    pair.BaseAsset,
 			Decimals: int(decimals),
+			Rank:     0,
 			Active:   true,
 			Listed:   false,
 			Quote:    false,
@@ -174,15 +170,13 @@ func (s *PairService) Create(pair *types.Pair) error {
 		}
 
 		pair.QuoteTokenSymbol = quote.Symbol
-		pair.QuoteTokenAddress = quote.Address
+		pair.QuoteAsset = quote.Asset
 		pair.QuoteTokenDecimals = quote.Decimals
 		pair.BaseTokenSymbol = token.Symbol
-		pair.BaseTokenAddress = token.Address
+		pair.BaseAsset = token.Asset
 		pair.BaseTokenDecimals = token.Decimals
 		pair.Active = true
 		pair.Listed = false
-		pair.MakeFee = quote.MakeFee
-		pair.TakeFee = quote.TakeFee
 
 		err = s.pairDao.Create(pair)
 		if err != nil {
@@ -199,10 +193,10 @@ func (s *PairService) GetByID(id bson.ObjectId) (*types.Pair, error) {
 	return s.pairDao.GetByID(id)
 }
 
-// GetByTokenAddress fetches details of a pair using contract address of
+// GetByAsset fetches details of a pair using asset IDs of
 // its constituting tokens
-func (s *PairService) GetByTokenAddress(bt, qt common.Address) (*types.Pair, error) {
-	return s.pairDao.GetByTokenAddress(bt, qt)
+func (s *PairService) GetByAsset(bt, qt string) (*types.Pair, error) {
+	return s.pairDao.GetByAsset(bt, qt)
 }
 
 // GetAll is reponsible for fetching all the pairs in the DB
@@ -218,11 +212,11 @@ func (s *PairService) GetUnlistedPairs() ([]types.Pair, error) {
 	return s.pairDao.GetUnlistedPairs()
 }
 
-func (s *PairService) GetTokenPairData(bt, qt common.Address) ([]*types.Tick, error) {
+func (s *PairService) GetTokenPairData(bt, qt string) ([]*types.Tick, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	q := []bson.M{
 		bson.M{
@@ -231,9 +225,9 @@ func (s *PairService) GetTokenPairData(bt, qt common.Address) ([]*types.Tick, er
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status":     bson.M{"$in": []string{"SUCCESS"}},
-				"baseToken":  bt.Hex(),
-				"quoteToken": qt.Hex(),
+				"status":     bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
+				"baseToken":  bt,
+				"quoteToken": qt,
 			},
 		},
 		bson.M{
@@ -243,12 +237,12 @@ func (s *PairService) GetTokenPairData(bt, qt common.Address) ([]*types.Tick, er
 					"pairName":   "$pairName",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"open":   bson.M{"$first": bson.M{"$toDecimal": "$pricepoint"}},
-				"high":   bson.M{"$max": bson.M{"$toDecimal": "$pricepoint"}},
-				"low":    bson.M{"$min": bson.M{"$toDecimal": "$pricepoint"}},
-				"close":  bson.M{"$last": bson.M{"$toDecimal": "$pricepoint"}},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"open":   bson.M{"$first": "$price"},
+				"high":   bson.M{"$max": "$price"},
+				"low":    bson.M{"$min": "$price"},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -265,7 +259,7 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	pairs, err := s.pairDao.GetActivePairs()
 	if err != nil {
@@ -279,7 +273,7 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -289,12 +283,12 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"open":   bson.M{"$first": "$pricepoint"},
-				"high":   bson.M{"$max": "$pricepoint"},
-				"low":    bson.M{"$min": "$pricepoint"},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"open":   bson.M{"$first": "$price"},
+				"high":   bson.M{"$max": "$price"},
+				"low":    bson.M{"$min": "$price"},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -313,13 +307,13 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -338,13 +332,13 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -370,55 +364,55 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 	pairsData := []*types.PairData{}
 	for _, p := range pairs {
 		pairData := &types.PairData{
-			Pair:               types.PairID{p.Name(), p.BaseTokenAddress, p.QuoteTokenAddress},
-			Open:               big.NewInt(0),
-			High:               big.NewInt(0),
-			Low:                big.NewInt(0),
-			Volume:             big.NewInt(0),
-			Close:              big.NewInt(0),
-			Count:              big.NewInt(0),
-			OrderVolume:        big.NewInt(0),
-			OrderCount:         big.NewInt(0),
-			BidPrice:           big.NewInt(0),
-			AskPrice:           big.NewInt(0),
-			Price:              big.NewInt(0),
-			AverageOrderAmount: big.NewInt(0),
-			AverageTradeAmount: big.NewInt(0),
+			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
+			Open:               0,
+			High:               0,
+			Low:                0,
+			Volume:             0,
+			Close:              0,
+			Count:              0,
+			OrderVolume:        0,
+			OrderCount:         0,
+			BidPrice:           0,
+			AskPrice:           0,
+			Price:              0,
+			AverageOrderAmount: 0,
+			AverageTradeAmount: 0,
 		}
 
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
+			if t.AssetCode() == p.AssetCode() {
 				pairData.Open = t.Open
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
-				pairData.AverageTradeAmount = math.Div(t.Volume, t.Count)
+				pairData.AverageTradeAmount = (t.Volume / t.Count)
 
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				pairData.OrderVolume = o.OrderVolume
 				pairData.OrderCount = o.OrderCount
 				pairData.BidPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
-				pairData.OrderVolume = math.Add(pairData.OrderVolume, o.OrderVolume)
-				pairData.OrderCount = math.Add(pairData.OrderCount, o.OrderCount)
+			if o.AssetCode() == p.AssetCode() {
+				pairData.OrderVolume += o.OrderVolume
+				pairData.OrderCount += o.OrderCount
 				pairData.AskPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
-				if math.IsNotEqual(pairData.BidPrice, big.NewInt(0)) && math.IsNotEqual(pairData.AskPrice, big.NewInt(0)) {
-					pairData.Price = math.Avg(pairData.BidPrice, pairData.AskPrice)
+				if pairData.BidPrice != 0 && pairData.AskPrice != 0 {
+					pairData.Price = (pairData.BidPrice + pairData.AskPrice) / 2
 				} else {
-					pairData.Price = big.NewInt(0)
+					pairData.Price = 0
 				}
 			}
 		}
@@ -434,7 +428,7 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	pairs, err := s.pairDao.GetActivePairs()
 	if err != nil {
@@ -448,7 +442,7 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -458,12 +452,12 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"open":   bson.M{"$first": "$pricepoint"},
-				"high":   bson.M{"$max": "$pricepoint"},
-				"low":    bson.M{"$min": "$pricepoint"},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"open":   bson.M{"$first": "$price"},
+				"high":   bson.M{"$max": "$price"},
+				"low":    bson.M{"$min": "$price"},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -482,13 +476,13 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -507,13 +501,13 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -539,55 +533,55 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 	pairsData := []*types.PairAPIData{}
 	for _, p := range pairs {
 		pairData := &types.PairData{
-			Pair:               types.PairID{p.Name(), p.BaseTokenAddress, p.QuoteTokenAddress},
-			Open:               big.NewInt(0),
-			High:               big.NewInt(0),
-			Low:                big.NewInt(0),
-			Volume:             big.NewInt(0),
-			Close:              big.NewInt(0),
-			Count:              big.NewInt(0),
-			OrderVolume:        big.NewInt(0),
-			OrderCount:         big.NewInt(0),
-			BidPrice:           big.NewInt(0),
-			AskPrice:           big.NewInt(0),
-			Price:              big.NewInt(0),
-			AverageOrderAmount: big.NewInt(0),
-			AverageTradeAmount: big.NewInt(0),
+			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
+			Open:               0,
+			High:               0,
+			Low:                0,
+			Volume:             0,
+			Close:              0,
+			Count:              0,
+			OrderVolume:        0,
+			OrderCount:         0,
+			BidPrice:           0,
+			AskPrice:           0,
+			Price:              0,
+			AverageOrderAmount: 0,
+			AverageTradeAmount: 0,
 		}
 
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
+			if t.AssetCode() == p.AssetCode() {
 				pairData.Open = t.Open
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
-				pairData.AverageTradeAmount = math.Div(t.Volume, t.Count)
+				pairData.AverageTradeAmount = (t.Volume / t.Count)
 
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				pairData.OrderVolume = o.OrderVolume
 				pairData.OrderCount = o.OrderCount
 				pairData.BidPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
-				pairData.OrderVolume = math.Add(pairData.OrderVolume, o.OrderVolume)
-				pairData.OrderCount = math.Add(pairData.OrderCount, o.OrderCount)
+			if o.AssetCode() == p.AssetCode() {
+				pairData.OrderVolume += o.OrderVolume
+				pairData.OrderCount += o.OrderCount
 				pairData.AskPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
-				if math.IsNotEqual(pairData.BidPrice, big.NewInt(0)) && math.IsNotEqual(pairData.AskPrice, big.NewInt(0)) {
-					pairData.Price = math.Avg(pairData.BidPrice, pairData.AskPrice)
+				if pairData.BidPrice != 0 && pairData.AskPrice != 0 {
+					pairData.Price = (pairData.BidPrice + pairData.AskPrice) / 2
 				} else {
-					pairData.Price = big.NewInt(0)
+					pairData.Price = 0
 				}
 			}
 		}
@@ -602,7 +596,7 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	pairs, err := s.pairDao.GetActivePairs()
 	if err != nil {
@@ -616,7 +610,7 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -626,12 +620,12 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"open":   bson.M{"$first": "$pricepoint"},
-				"high":   bson.M{"$max": "$pricepoint"},
-				"low":    bson.M{"$min": "$pricepoint"},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"open":   bson.M{"$first": "$price"},
+				"high":   bson.M{"$max": "$price"},
+				"low":    bson.M{"$min": "$price"},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -650,13 +644,13 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -675,13 +669,13 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -707,55 +701,55 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 	pairsData := []*types.SimplifiedPairAPIData{}
 	for _, p := range pairs {
 		pairData := &types.PairData{
-			Pair:               types.PairID{p.Name(), p.BaseTokenAddress, p.QuoteTokenAddress},
-			Open:               big.NewInt(0),
-			High:               big.NewInt(0),
-			Low:                big.NewInt(0),
-			Volume:             big.NewInt(0),
-			Close:              big.NewInt(0),
-			Count:              big.NewInt(0),
-			OrderVolume:        big.NewInt(0),
-			OrderCount:         big.NewInt(0),
-			BidPrice:           big.NewInt(0),
-			AskPrice:           big.NewInt(0),
-			Price:              big.NewInt(0),
-			AverageOrderAmount: big.NewInt(0),
-			AverageTradeAmount: big.NewInt(0),
+			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
+			Open:               0,
+			High:               0,
+			Low:                0,
+			Volume:             0,
+			Close:              0,
+			Count:              0,
+			OrderVolume:        0,
+			OrderCount:         0,
+			BidPrice:           0,
+			AskPrice:           0,
+			Price:              0,
+			AverageOrderAmount: 0,
+			AverageTradeAmount: 0,
 		}
 
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
+			if t.AssetCode() == p.AssetCode() {
 				pairData.Open = t.Open
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
-				pairData.AverageTradeAmount = math.Div(t.Volume, t.Count)
+				pairData.AverageTradeAmount = (t.Volume / t.Count)
 
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				pairData.OrderVolume = o.OrderVolume
 				pairData.OrderCount = o.OrderCount
 				pairData.BidPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
-				pairData.OrderVolume = math.Add(pairData.OrderVolume, o.OrderVolume)
-				pairData.OrderCount = math.Add(pairData.OrderCount, o.OrderCount)
+			if o.AssetCode() == p.AssetCode() {
+				pairData.OrderVolume += o.OrderVolume
+				pairData.OrderCount += o.OrderCount
 				pairData.AskPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
-				if math.IsNotEqual(pairData.BidPrice, big.NewInt(0)) && math.IsNotEqual(pairData.AskPrice, big.NewInt(0)) {
-					pairData.Price = math.Avg(pairData.BidPrice, pairData.AskPrice)
+				if pairData.BidPrice != 0 && pairData.AskPrice != 0 {
+					pairData.Price = (pairData.BidPrice + pairData.AskPrice) / 2
 				} else {
-					pairData.Price = big.NewInt(0)
+					pairData.Price = 0
 				}
 			}
 		}

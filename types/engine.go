@@ -3,9 +3,6 @@ package types
 import (
 	"errors"
 	"fmt"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type Matches struct {
@@ -30,24 +27,24 @@ func (m *Matches) NthMatch(i int) *Matches {
 	)
 }
 
-func (m *Matches) Taker() common.Address {
+func (m *Matches) Taker() string {
 	return m.TakerOrder.UserAddress
 }
 
-func (m *Matches) TakerOrderHash() common.Hash {
+func (m *Matches) TakerOrderHash() string {
 	return m.TakerOrder.Hash
 }
 
 func (m *Matches) String() string {
-	return fmt.Sprintf("%v: %v", m.TakerOrder.PairName, m.TakerOrder.Hash.Hex())
+	return fmt.Sprintf("%v: %v", m.TakerOrder.PairName, m.TakerOrder.Hash)
 }
 
 func (m *Matches) PairCode() (string, error) {
 	return m.TakerOrder.PairCode()
 }
 
-func (m *Matches) TradeAmounts() []*big.Int {
-	amounts := []*big.Int{}
+func (m *Matches) TradeAmounts() []int64 {
+	amounts := []int64{}
 	for _, t := range m.Trades {
 		amounts = append(amounts, t.Amount)
 	}

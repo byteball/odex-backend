@@ -4,17 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
-	"math/big"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/gorilla/websocket"
 	"github.com/posener/wstest"
 )
@@ -26,19 +22,17 @@ var logger = utils.TerminalLogger
 // Client simulates the client websocket handler that will be used to perform trading.
 // requests and responses are respectively the outbound and incoming messages.
 // requestLogs and responseLogs are arrays of messages that denote the history of received messages
-// wallet is the ethereum account used for orders and trades.
+// wallet is the Obyte account used for orders and trades.
 // mutex is used to prevent concurrent writes on the websocket connection
 type Client struct {
-	// ethereumClient *ethclient.Client
-	connection     *ws.Client
-	Requests       chan *types.WebsocketMessage
-	Responses      chan *types.WebsocketMessage
-	Logs           chan *ClientLogMessage
-	Wallet         *types.Wallet
-	RequestLogs    []types.WebsocketMessage
-	ResponseLogs   []types.WebsocketMessage
-	mutex          sync.Mutex
-	NonceGenerator *rand.Rand
+	connection *ws.Client
+	Requests   chan *types.WebsocketMessage
+	Responses  chan *types.WebsocketMessage
+	Logs       chan *ClientLogMessage
+	//Wallet         *types.Wallet
+	RequestLogs  []types.WebsocketMessage
+	ResponseLogs []types.WebsocketMessage
+	mutex        sync.Mutex
 }
 
 // The client log is mostly used for testing. It optionally takes orders, trade,
@@ -50,7 +44,7 @@ type ClientLogMessage struct {
 	Orders      []*types.Order `json:"order"`
 	Trades      []*types.Trade `json:"trade"`
 	Matches     *types.Matches `json:"matches"`
-	Tx          *common.Hash   `json:"tx"`
+	Tx          *string        `json:"tx"`
 	ErrorID     int8           `json:"errorID"`
 }
 
@@ -59,7 +53,7 @@ type Server interface {
 }
 
 // NewClient a default client struct connected to the given server
-func NewClient(w *types.Wallet, s Server) *Client {
+func NewClient( /*w *types.Wallet,*/ s Server) *Client {
 	flag.Parse()
 	uri := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/socket"}
 
@@ -75,18 +69,14 @@ func NewClient(w *types.Wallet, s Server) *Client {
 	reqLogs := make([]types.WebsocketMessage, 0)
 	respLogs := make([]types.WebsocketMessage, 0)
 
-	source := rand.NewSource(time.Now().UnixNano())
-	ng := rand.New(source)
-
 	return &Client{
-		connection:     ws.NewClient(c),
-		Wallet:         w,
-		Requests:       reqs,
-		Responses:      resps,
-		RequestLogs:    reqLogs,
-		ResponseLogs:   respLogs,
-		Logs:           logs,
-		NonceGenerator: ng,
+		connection: ws.NewClient(c),
+		//Wallet:         w,
+		Requests:     reqs,
+		Responses:    resps,
+		RequestLogs:  reqLogs,
+		ResponseLogs: respLogs,
+		Logs:         logs,
 	}
 }
 
@@ -349,8 +339,4 @@ func (c *Client) handleOHLCVInit(e types.WebsocketEvent) {
 
 func (c *Client) handleOHLCVUpdate(e types.WebsocketEvent) {
 
-}
-
-func (c *Client) SetNonce(o *types.Order) {
-	o.Nonce = big.NewInt(int64(c.NonceGenerator.Intn(1e8)))
 }

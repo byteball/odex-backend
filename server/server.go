@@ -6,22 +6,20 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/contracts"
-	"github.com/Proofsuite/amp-matching-engine/daos"
-	"github.com/Proofsuite/amp-matching-engine/endpoints"
-	"github.com/Proofsuite/amp-matching-engine/errors"
-	"github.com/Proofsuite/amp-matching-engine/ethereum"
-	"github.com/Proofsuite/amp-matching-engine/operator"
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/services"
-	"github.com/Proofsuite/amp-matching-engine/ws"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/daos"
+	"github.com/byteball/odex-backend/endpoints"
+	"github.com/byteball/odex-backend/errors"
+	"github.com/byteball/odex-backend/obyte"
+	"github.com/byteball/odex-backend/operator"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/services"
+	"github.com/byteball/odex-backend/ws"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/Proofsuite/amp-matching-engine/engine"
+	"github.com/byteball/odex-backend/engine"
 )
 
 func Start() {
@@ -43,7 +41,7 @@ func Start() {
 
 	rabbitConn := rabbitmq.InitConnection(app.Config.RabbitMQURL)
 
-	provider := ethereum.NewWebsocketProvider()
+	provider := obyte.NewObyteProvider()
 
 	router := NewRouter(provider, rabbitConn)
 	router.HandleFunc("/socket", ws.ConnectionEndpoint)
@@ -102,7 +100,7 @@ func handleCerts(certManager *autocert.Manager) {
 }
 
 func NewRouter(
-	provider *ethereum.EthereumProvider,
+	provider *obyte.ObyteProvider,
 	rabbitConn *rabbitmq.Connection,
 ) *mux.Router {
 
@@ -114,15 +112,14 @@ func NewRouter(
 	pairDao := daos.NewPairDao()
 	tradeDao := daos.NewTradeDao()
 	accountDao := daos.NewAccountDao()
-	walletDao := daos.NewWalletDao()
 
 	// instantiate engine
-	eng := engine.NewEngine(rabbitConn, orderDao, tradeDao, pairDao)
+	eng := engine.NewEngine(rabbitConn, orderDao, tradeDao, pairDao, provider)
 
 	// get services for injection
 	accountService := services.NewAccountService(accountDao, tokenDao)
 	ohlcvService := services.NewOHLCVService(tradeDao)
-	tokenService := services.NewTokenService(tokenDao)
+	tokenService := services.NewTokenService(tokenDao, provider)
 	tradeService := services.NewTradeService(tradeDao)
 	validatorService := services.NewValidatorService(provider, accountDao, orderDao, pairDao)
 	priceService := services.NewPriceService()
@@ -131,28 +128,14 @@ func NewRouter(
 	pairService := services.NewPairService(pairDao, tokenDao, tradeDao, orderDao, eng, provider)
 	orderService := services.NewOrderService(orderDao, pairDao, accountDao, tradeDao, eng, validatorService, rabbitConn)
 	orderBookService := services.NewOrderBookService(pairDao, tokenDao, orderDao, eng)
-	walletService := services.NewWalletService(walletDao)
 	// cronService := crons.NewCronService(ohlcvService)
-
-	// get exchange contract instance
-	exchangeAddress := common.HexToAddress(app.Config.Ethereum["exchange_address"])
-	exchange, err := contracts.NewExchange(
-		walletService,
-		exchangeAddress,
-		provider.Client,
-	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	// deploy operator
 	op, err := operator.NewOperator(
-		walletService,
 		tradeService,
 		orderService,
+		accountService,
 		provider,
-		exchange,
 		rabbitConn,
 	)
 
@@ -161,14 +144,15 @@ func NewRouter(
 	}
 
 	// deploy http and ws endpoints
-	endpoints.ServeInfoResource(r, walletService, tokenService, infoService)
-	endpoints.ServeAccountResource(r, accountService)
+	endpoints.ServeInfoResource(r, tokenService, infoService, provider)
+	endpoints.ServeAccountResource(r, accountService, orderService, provider)
 	endpoints.ServeTokenResource(r, tokenService)
 	endpoints.ServePairResource(r, pairService)
 	endpoints.ServeOrderBookResource(r, orderBookService)
 	endpoints.ServeOHLCVResource(r, ohlcvService)
 	endpoints.ServeTradeResource(r, tradeService)
-	endpoints.ServeOrderResource(r, orderService, accountService, eng)
+	endpoints.ServeOrderResource(r, orderService, accountService, provider)
+	endpoints.ServeLoginResource(r)
 
 	//initialize rabbitmq subscriptions
 	rabbitConn.SubscribeOrders(eng.HandleOrders)

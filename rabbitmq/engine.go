@@ -3,7 +3,7 @@ package rabbitmq
 import (
 	"encoding/json"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
+	"github.com/byteball/odex-backend/types"
 )
 
 func (c *Connection) SubscribeEngineResponses(fn func(*types.EngineResponse) error) error {

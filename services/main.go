@@ -3,7 +3,7 @@ package services
 import (
 	"errors"
 
-	"github.com/Proofsuite/amp-matching-engine/utils"
+	"github.com/byteball/odex-backend/utils"
 )
 
 var logger = utils.Logger
@@ -17,4 +17,4 @@ var ErrQuoteTokenInvalid = errors.New("Quote Token Invalid (not a quote)")
 var ErrTokenExists = errors.New("Token already exists")
 var ErrAccountNotFound = errors.New("Account not found")
 var ErrAccountExists = errors.New("Account already Exists")
-var ErrNoContractCode = errors.New("Contract not found at given address")
+var ErrNoAsset = errors.New("Asset not found")

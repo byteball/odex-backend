@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/ws"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
+	"github.com/byteball/odex-backend/ws"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
+	"github.com/byteball/odex-backend/app"
 	"github.com/robfig/cron"
 )
 
@@ -27,7 +27,7 @@ func (s *CronService) tickStreamingCron(c *cron.Cron) {
 // and broadcasts the tick to the client subscribed to pair's respective channel
 func (s *CronService) tickStream(unit string, duration int64) func() {
 	return func() {
-		p := make([]types.PairAddresses, 0)
+		p := make([]types.PairAssets, 0)
 		ticks, err := s.ohlcvService.GetOHLCV(p, duration, unit)
 		if err != nil {
 			log.Printf("%s", err)
@@ -35,9 +35,9 @@ func (s *CronService) tickStream(unit string, duration int64) func() {
 		}
 
 		for _, tick := range ticks {
-			baseTokenAddress := tick.ID.BaseToken
-			quoteTokenAddress := tick.ID.QuoteToken
-			id := utils.GetTickChannelID(baseTokenAddress, quoteTokenAddress, unit, duration)
+			baseAsset := tick.Pair.BaseToken
+			quoteAsset := tick.Pair.QuoteToken
+			id := utils.GetTickChannelID(baseAsset, quoteAsset, unit, duration)
 			ws.GetOHLCVSocket().BroadcastOHLCV(id, tick)
 		}
 	}

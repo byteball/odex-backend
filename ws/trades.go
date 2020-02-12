@@ -112,20 +112,20 @@ func (s *TradeSocket) BroadcastMessage(channelID string, p interface{}) {
 
 // SendMessage sends a websocket message on the trade channel
 func (s *TradeSocket) SendMessage(c *Client, msgType string, p interface{}) {
-	c.SendMessage(TradeChannel, msgType, p)
+	go c.SendMessage(TradeChannel, msgType, p)
 }
 
 // SendErrorMessage sends an error message on the trade channel
 func (s *TradeSocket) SendErrorMessage(c *Client, p interface{}) {
-	c.SendMessage(TradeChannel, "ERROR", p)
+	go c.SendMessage(TradeChannel, "ERROR", p)
 }
 
 // SendInitMessage is responsible for sending message on trade ohlcv channel at subscription
 func (s *TradeSocket) SendInitMessage(c *Client, p interface{}) {
-	c.SendMessage(TradeChannel, "INIT", p)
+	go c.SendMessage(TradeChannel, "INIT", p)
 }
 
 // SendUpdateMessage is responsible for sending message on trade ohlcv channel at subscription
 func (s *TradeSocket) SendUpdateMessage(c *Client, p interface{}) {
-	c.SendMessage(TradeChannel, "UPDATE", p)
+	go c.SendMessage(TradeChannel, "UPDATE", p)
 }

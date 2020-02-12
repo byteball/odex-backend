@@ -3,28 +3,26 @@ package endpoints
 import (
 	"net/http"
 
-	"github.com/Proofsuite/amp-matching-engine/app"
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/httputils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/httputils"
 	"github.com/gorilla/mux"
 )
 
 type infoEndpoint struct {
-	walletService interfaces.WalletService
 	tokenService  interfaces.TokenService
 	infoService   interfaces.InfoService
+	obyteProvider interfaces.ObyteProvider
 }
 
 func ServeInfoResource(
 	r *mux.Router,
-	walletService interfaces.WalletService,
 	tokenService interfaces.TokenService,
 	infoService interfaces.InfoService,
+	obyteProvider interfaces.ObyteProvider,
 ) {
 
-	e := &infoEndpoint{walletService, tokenService, infoService}
+	e := &infoEndpoint{tokenService, infoService, obyteProvider}
 	r.HandleFunc("/info", e.handleGetInfo)
 	r.HandleFunc("/info/exchange", e.handleGetExchangeInfo)
 	r.HandleFunc("/info/operators", e.handleGetOperatorsInfo)
@@ -35,31 +33,27 @@ func ServeInfoResource(
 }
 
 func (e *infoEndpoint) handleGetInfo(w http.ResponseWriter, r *http.Request) {
-	ex := common.HexToAddress(app.Config.Ethereum["exchange_address"])
+	operator_address := e.obyteProvider.GetOperatorAddress()
+	matcherFee, affiliateFee := e.obyteProvider.GetFees()
 
-	operators, err := e.walletService.GetOperatorAddresses()
-	if err != nil {
-		logger.Error(err)
-		httputils.WriteJSON(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
+	operators := [1]string{operator_address}
 
 	quotes, err := e.tokenService.GetQuoteTokens()
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 
-	fees := []map[string]string{}
+	fees := map[string]map[string]float64{}
 	for _, q := range quotes {
-		fees = append(fees, map[string]string{
-			"quote":   q.Symbol,
-			"makeFee": q.MakeFee.String(),
-			"takeFee": q.TakeFee.String(),
-		})
+		fees[q.Symbol] = map[string]float64{
+			"matcherFee":   matcherFee,
+			"affiliateFee": affiliateFee,
+		}
 	}
 
 	res := map[string]interface{}{
-		"exchangeAddress": ex.Hex(),
+		"operatorAddress": operator_address,
 		"fees":            fees,
 		"operators":       operators,
 	}
@@ -68,38 +62,35 @@ func (e *infoEndpoint) handleGetInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *infoEndpoint) handleGetExchangeInfo(w http.ResponseWriter, r *http.Request) {
-	ex := common.HexToAddress(app.Config.Ethereum["exchange_address"])
+	operator_address := e.obyteProvider.GetOperatorAddress()
 
-	res := map[string]string{"exchangeAddress": ex.Hex()}
+	res := map[string]string{"operatorAddress": operator_address}
 
 	httputils.WriteJSON(w, http.StatusOK, res)
 }
 
 func (e *infoEndpoint) handleGetOperatorsInfo(w http.ResponseWriter, r *http.Request) {
-	addresses, err := e.walletService.GetOperatorAddresses()
-	if err != nil {
-		logger.Error(err)
-		httputils.WriteJSON(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
+	operator_address := e.obyteProvider.GetOperatorAddress()
 
-	res := map[string][]common.Address{"operators": addresses}
+	addresses := []string{operator_address}
+	res := map[string][]string{"operators": addresses}
 	httputils.WriteJSON(w, http.StatusOK, res)
 }
 
 func (e *infoEndpoint) handleGetFeeInfo(w http.ResponseWriter, r *http.Request) {
+	matcherFee, affiliateFee := e.obyteProvider.GetFees()
 	quotes, err := e.tokenService.GetQuoteTokens()
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 
-	fees := []map[string]string{}
+	fees := map[string]map[string]float64{}
 	for _, q := range quotes {
-		fees = append(fees, map[string]string{
-			"quote":   q.Symbol,
-			"makeFee": q.MakeFee.String(),
-			"takeFee": q.TakeFee.String(),
-		})
+		fees[q.Symbol] = map[string]float64{
+			"matcherFee":   matcherFee,
+			"affiliateFee": affiliateFee,
+		}
 	}
 
 	httputils.WriteJSON(w, http.StatusOK, fees)

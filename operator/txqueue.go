@@ -3,45 +3,36 @@ package operator
 import (
 	"encoding/json"
 	"errors"
-	"math/big"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	eth "github.com/ethereum/go-ethereum/core/types"
+	"github.com/byteball/odex-backend/app"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/types"
 	"github.com/streadway/amqp"
 )
 
 type TxQueue struct {
-	Name             string
-	Wallet           *types.Wallet
-	TradeService     interfaces.TradeService
-	OrderService     interfaces.OrderService
-	EthereumProvider interfaces.EthereumProvider
-	Exchange         interfaces.Exchange
-	Broker           *rabbitmq.Connection
+	Name          string
+	TradeService  interfaces.TradeService
+	OrderService  interfaces.OrderService
+	ObyteProvider interfaces.ObyteProvider
+	Broker        *rabbitmq.Connection
 }
 
 // NewTxQueue
 func NewTxQueue(
 	n string,
 	tr interfaces.TradeService,
-	p interfaces.EthereumProvider,
+	p interfaces.ObyteProvider,
 	o interfaces.OrderService,
-	w *types.Wallet,
-	ex interfaces.Exchange,
 	rabbitConn *rabbitmq.Connection,
 ) (*TxQueue, error) {
 	txq := &TxQueue{
-		Name:             n,
-		TradeService:     tr,
-		OrderService:     o,
-		EthereumProvider: p,
-		Wallet:           w,
-		Exchange:         ex,
-		Broker:           rabbitConn,
+		Name:          n,
+		TradeService:  tr,
+		OrderService:  o,
+		ObyteProvider: p,
+		Broker:        rabbitConn,
 	}
 
 	err := txq.PurgePendingTrades()
@@ -53,7 +44,7 @@ func NewTxQueue(
 	name := "TX_QUEUES:" + txq.Name
 	ch := txq.Broker.GetChannel(name)
 
-	q, err := ch.QueueInspect(name)
+	q, err := ch.QueueInspect(name + "@" + app.Config.Env)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -71,21 +62,11 @@ func (txq *TxQueue) GetChannel() *amqp.Channel {
 	return txq.Broker.GetChannel(name)
 }
 
-func (txq *TxQueue) GetTxSendOptions() *bind.TransactOpts {
-	return bind.NewKeyedTransactor(txq.Wallet.PrivateKey)
-}
-
-func (txq *TxQueue) GetTxCallOptions() *ethereum.CallMsg {
-	address := txq.Exchange.GetAddress()
-
-	return &ethereum.CallMsg{From: txq.Wallet.Address, To: &address}
-}
-
 // Length
 func (txq *TxQueue) Length() int {
 	name := "TX_QUEUES:" + txq.Name
 	ch := txq.Broker.GetChannel(name)
-	q, err := ch.QueueInspect(name)
+	q, err := ch.QueueInspect(name + "@" + app.Config.Env)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -93,88 +74,74 @@ func (txq *TxQueue) Length() int {
 	return q.Messages
 }
 
-// ExecuteTrade send a trade execution order to the smart contract interface. After sending the
+// ExecuteTrade send a trade execution order to the AA. After sending the
 // trade message, the trade is updated on the database and is published to the operator subscribers
 // (order service)
 func (txq *TxQueue) ExecuteTrade(m *types.Matches, tag uint64) error {
 	logger.Infof("Executing trades")
 
-	callOpts := txq.GetTxCallOptions()
-	gasLimit, err := txq.Exchange.CallBatchTrades(m, callOpts)
-	if err != nil {
-		txq.HandleTradeInvalid(m)
-		logger.Error(err)
-		return err
+	arrTriggerUnits, ex_err := txq.ObyteProvider.ExecuteTrade(m)
+	if ex_err != nil {
+		//txq.HandleError(m)
+		logger.Error(ex_err)
+		//if len(arrTriggerUnits) == 0 {
+		return ex_err
+		//}
 	}
 
-	//a low gas limit means that the transaction returned before being completed
-	//and is therefore not valid.
-	if gasLimit < 140000 {
-		txq.HandleTradeInvalid(m)
-		logger.Error(err)
-		return errors.New("Invalid Trade")
-	}
-
-	nonce, err := txq.EthereumProvider.GetPendingNonceAt(txq.Wallet.Address)
-	if err != nil {
-		txq.HandleError(m)
-		logger.Error(err)
-		return err
-	}
-
-	txOpts := txq.GetTxSendOptions()
-	txOpts.Nonce = big.NewInt(int64(nonce))
-	tx, err := txq.Exchange.ExecuteBatchTrades(m, txOpts)
-	if err != nil {
-		txq.HandleError(m)
-		logger.Error(err)
-		return err
+	countSuccessful := len(arrTriggerUnits)
+	if countSuccessful == 0 {
+		panic("no error but units array is empty")
 	}
 
 	updatedTrades := []*types.Trade{}
-	for _, t := range m.Trades {
-		updated, err := txq.TradeService.UpdatePendingTrade(t, tx.Hash())
+	for i, _ := range arrTriggerUnits {
+		/*updated, err := txq.TradeService.UpdatePendingTrade(m.Trades[i], trigger_unit)
 		if err != nil {
 			logger.Error(err)
 		}
 
-		updatedTrades = append(updatedTrades, updated)
+		updatedTrades = append(updatedTrades, updated)*/
+		updatedTrades = append(updatedTrades, m.Trades[i])
 	}
 
-	m.Trades = updatedTrades
-	err = txq.Broker.PublishTradeSentMessage(m)
+	successfulMatches := types.Matches{
+		TakerOrder:  m.TakerOrder,
+		MakerOrders: m.MakerOrders[:countSuccessful],
+		Trades:      updatedTrades,
+	}
+	//m.Trades = updatedTrades
+	err := txq.Broker.PublishTradeSentMessage(&successfulMatches)
 	if err != nil {
 		logger.Error(err)
 		return errors.New("Could not update")
 	}
 
-	receipt, err := txq.EthereumProvider.WaitMined(tx.Hash())
-	if err != nil {
-		logger.Error(err)
-		return err
-	}
-
-	if receipt.Status == 0 {
-
-		err := txq.HandleTxError(m)
+	/*if countSuccessful != 0 {
+		err = txq.HandleTxSuccess(&successfulMatches)
 		if err != nil {
 			logger.Error(err)
 			return err
 		}
+	}*/
 
-		return errors.New("Transaction Error")
-	}
+	// if ex_err != nil {
+	// 	return ex_err
+	// }
 
-	err = txq.HandleTxSuccess(m, receipt)
-	if err != nil {
-		logger.Error(err)
-		return err
-	}
+	/*if countSuccessful < len(m.MakerOrders) {
+		failedMatches := types.Matches{
+			TakerOrder:  m.TakerOrder,
+			MakerOrders: m.MakerOrders[countSuccessful:],
+			Trades:      m.Trades[countSuccessful:],
+		}
+		txq.HandleError(&failedMatches)
+	}*/
 
 	return nil
 }
 
-func (txq *TxQueue) HandleTradeInvalid(m *types.Matches) error {
+/*func (txq *TxQueue) HandleTradeInvalid(m *types.Matches) error {
 	logger.Errorf("Trade invalid: %v", m)
 
 	err := txq.Broker.PublishTradeInvalidMessage(m)
@@ -183,9 +150,9 @@ func (txq *TxQueue) HandleTradeInvalid(m *types.Matches) error {
 	}
 
 	return nil
-}
+}*/
 
-func (txq *TxQueue) HandleTxError(m *types.Matches) error {
+/*func (txq *TxQueue) HandleTxError(m *types.Matches) error {
 	logger.Errorf("Transaction Error: %v", m)
 
 	errType := "Transaction error"
@@ -195,9 +162,9 @@ func (txq *TxQueue) HandleTxError(m *types.Matches) error {
 	}
 
 	return nil
-}
+}*/
 
-func (txq *TxQueue) HandleTxSuccess(m *types.Matches, receipt *eth.Receipt) error {
+func (txq *TxQueue) HandleTxSuccess(m *types.Matches) error {
 	logger.Infof("Transaction success: %v", m)
 
 	err := txq.Broker.PublishTradeSuccessMessage(m)
@@ -209,7 +176,7 @@ func (txq *TxQueue) HandleTxSuccess(m *types.Matches, receipt *eth.Receipt) erro
 	return nil
 }
 
-func (txq *TxQueue) HandleError(m *types.Matches) error {
+/*func (txq *TxQueue) HandleError(m *types.Matches) error {
 	logger.Errorf("Operator Error: %v", m)
 
 	errType := "Server error"
@@ -219,7 +186,7 @@ func (txq *TxQueue) HandleError(m *types.Matches) error {
 	}
 
 	return nil
-}
+}*/
 
 func (txq *TxQueue) PublishPendingTrades(m *types.Matches) error {
 	name := "TX_QUEUES:" + txq.Name

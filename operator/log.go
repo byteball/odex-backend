@@ -1,8 +1,8 @@
 package operator
 
 // import (
-// 	"github.com/Proofsuite/amp-matching-engine/types"
-// 	"github.com/Proofsuite/amp-matching-engine/utils"
+// 	"github.com/byteball/odex-backend/types"
+// 	"github.com/byteball/odex-backend/utils"
 // 	logging "github.com/op/go-logging"
 // )
 

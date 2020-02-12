@@ -2,13 +2,11 @@ package services
 
 import (
 	"log"
-	"math/big"
 	"time"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
-	"github.com/Proofsuite/amp-matching-engine/utils/math"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -41,7 +39,7 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	tokens, err := s.tokenDao.GetBaseTokens()
 	if err != nil {
@@ -89,7 +87,7 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -99,9 +97,9 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -120,13 +118,13 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -145,13 +143,13 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -186,35 +184,35 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 
 	for _, p := range pairs {
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
-				totalTrades = totalTrades + int(t.Count.Int64())
+			if t.AssetCode() == p.AssetCode() {
+				totalTrades += int(t.Count)
 
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalVolume = totalVolume + t.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
 
-				pairTradeCounts[p.Name()] = int(t.Count.Int64())
-				tokenTradeCounts[p.BaseTokenSymbol] = tokenTradeCounts[p.BaseTokenSymbol] + int(t.Count.Int64())
+				pairTradeCounts[p.Name()] = int(t.Count)
+				tokenTradeCounts[p.BaseTokenSymbol] += int(t.Count)
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				// change and replace by equivalent dollar volume instead of order count
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalBuyOrderAmount = totalBuyOrderAmount + o.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
-				totalBuyOrders = totalBuyOrders + int(o.OrderCount.Int64())
+				totalBuyOrders += int(o.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				// change and replace by equivalent dollar volume instead of order count
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalSellOrderAmount = totalSellOrderAmount + o.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
-				totalSellOrders = totalSellOrders + int(o.OrderCount.Int64())
+				totalSellOrders += int(o.OrderCount)
 			}
 		}
 	}
@@ -252,7 +250,7 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	tokens, err := s.tokenDao.GetBaseTokens()
 	if err != nil {
@@ -300,7 +298,7 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -310,9 +308,9 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -331,13 +329,13 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -356,13 +354,13 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -401,70 +399,70 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 
 	for _, p := range pairs {
 		pairData := &types.PairData{
-			Pair:               types.PairID{p.Name(), p.BaseTokenAddress, p.QuoteTokenAddress},
-			Volume:             big.NewInt(0),
-			Close:              big.NewInt(0),
-			Count:              big.NewInt(0),
-			OrderVolume:        big.NewInt(0),
-			OrderCount:         big.NewInt(0),
-			BidPrice:           big.NewInt(0),
-			AskPrice:           big.NewInt(0),
-			Price:              big.NewInt(0),
-			AverageOrderAmount: big.NewInt(0),
-			AverageTradeAmount: big.NewInt(0),
+			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
+			Volume:             0,
+			Close:              0,
+			Count:              0,
+			OrderVolume:        0,
+			OrderCount:         0,
+			BidPrice:           0,
+			AskPrice:           0,
+			Price:              0,
+			AverageOrderAmount: 0,
+			AverageTradeAmount: 0,
 		}
 
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
+			if t.AssetCode() == p.AssetCode() {
 				pairData.Volume = t.Volume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
-				pairData.AverageTradeAmount = math.Div(t.Volume, t.Count)
+				pairData.AverageTradeAmount = t.Volume / t.Count
 
-				totalTrades = totalTrades + int(t.Count.Int64())
+				totalTrades += int(t.Count)
 
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalVolume = totalVolume + t.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
 
-				pairTradeCounts[p.Name()] = int(t.Count.Int64())
-				tokenTradeCounts[p.BaseTokenSymbol] = tokenTradeCounts[p.BaseTokenSymbol] + int(t.Count.Int64())
+				pairTradeCounts[p.Name()] = int(t.Count)
+				tokenTradeCounts[p.BaseTokenSymbol] += int(t.Count)
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				pairData.OrderVolume = o.OrderVolume
 				pairData.OrderCount = o.OrderCount
 				pairData.BidPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalBuyOrderAmount = totalBuyOrderAmount + o.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
 
-				totalBuyOrders = totalBuyOrders + int(o.OrderCount.Int64())
+				totalBuyOrders += int(o.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
-				pairData.OrderVolume = math.Add(pairData.OrderVolume, o.OrderVolume)
-				pairData.OrderCount = math.Add(pairData.OrderCount, o.OrderCount)
+			if o.AssetCode() == p.AssetCode() {
+				pairData.OrderVolume += o.OrderVolume
+				pairData.OrderCount += o.OrderCount
 				pairData.AskPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
 				if exchangeRate := rates[p.BaseTokenSymbol]; exchangeRate != 0 {
 					totalSellOrderAmount = totalSellOrderAmount + o.ConvertedVolume(&p, rates[p.BaseTokenSymbol])
 				}
 
-				totalSellOrders = totalSellOrders + int(o.OrderCount.Int64())
+				totalSellOrders += int(o.OrderCount)
 
 				//TODO change price into orderbook price
-				if math.IsNotEqual(pairData.BidPrice, big.NewInt(0)) && math.IsNotEqual(pairData.AskPrice, big.NewInt(0)) {
-					pairData.Price = math.Avg(pairData.BidPrice, pairData.AskPrice)
+				if pairData.BidPrice != 0 && pairData.AskPrice != 0 {
+					pairData.Price = (pairData.BidPrice + pairData.AskPrice) / 2
 				} else {
-					pairData.Price = big.NewInt(0)
+					pairData.Price = 0
 				}
 			}
 		}
@@ -500,7 +498,7 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 	now := time.Now()
 	end := time.Unix(now.Unix(), 0)
 	start := time.Unix(now.AddDate(0, 0, -7).Unix(), 0)
-	one, _ := bson.ParseDecimal128("1")
+	//one, _ := bson.ParseDecimal128("1")
 
 	tokens, err := s.tokenDao.GetBaseTokens()
 	if err != nil {
@@ -536,7 +534,7 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 					"$gte": start,
 					"$lt":  end,
 				},
-				"status": bson.M{"$in": []string{"SUCCESS"}},
+				"status": bson.M{"$in": []string{"SUCCESS", "COMMITTED"}},
 			},
 		},
 		bson.M{
@@ -546,9 +544,9 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": one},
-				"close":  bson.M{"$last": "$pricepoint"},
-				"volume": bson.M{"$sum": bson.M{"$toDecimal": "$amount"}},
+				"count":  bson.M{"$sum": 1},
+				"close":  bson.M{"$last": "$price"},
+				"volume": bson.M{"$sum": "$amount"},
 			},
 		},
 	}
@@ -567,13 +565,13 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$max": "$pricepoint"},
+				"bestPrice": bson.M{"$max": "$price"},
 			},
 		},
 	}
@@ -592,13 +590,13 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"orderCount": bson.M{"$sum": one},
+				"orderCount": bson.M{"$sum": 1},
 				"orderVolume": bson.M{
 					"$sum": bson.M{
-						"$subtract": []bson.M{bson.M{"$toDecimal": "$amount"}, bson.M{"$toDecimal": "$filledAmount"}},
+						"$subtract": []string{"$amount", "$filledAmount"},
 					},
 				},
-				"bestPrice": bson.M{"$min": "$pricepoint"},
+				"bestPrice": bson.M{"$min": "$price"},
 			},
 		},
 	}
@@ -625,49 +623,49 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 
 	for _, p := range pairs {
 		pairData := &types.PairData{
-			Pair:               types.PairID{p.Name(), p.BaseTokenAddress, p.QuoteTokenAddress},
-			Volume:             big.NewInt(0),
-			Close:              big.NewInt(0),
-			Count:              big.NewInt(0),
-			OrderVolume:        big.NewInt(0),
-			OrderCount:         big.NewInt(0),
-			BidPrice:           big.NewInt(0),
-			AskPrice:           big.NewInt(0),
-			Price:              big.NewInt(0),
-			AverageOrderAmount: big.NewInt(0),
-			AverageTradeAmount: big.NewInt(0),
+			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
+			Volume:             0,
+			Close:              0,
+			Count:              0,
+			OrderVolume:        0,
+			OrderCount:         0,
+			BidPrice:           0,
+			AskPrice:           0,
+			Price:              0,
+			AverageOrderAmount: 0,
+			AverageTradeAmount: 0,
 		}
 
 		for _, t := range tradeData {
-			if t.AddressCode() == p.AddressCode() {
+			if t.AssetCode() == p.AssetCode() {
 				pairData.Volume = t.Volume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
-				pairData.AverageTradeAmount = math.Div(t.Volume, t.Count)
+				pairData.AverageTradeAmount = (t.Volume / t.Count)
 			}
 		}
 
 		for _, o := range bidsData {
-			if o.AddressCode() == p.AddressCode() {
+			if o.AssetCode() == p.AssetCode() {
 				pairData.OrderVolume = o.OrderVolume
 				pairData.OrderCount = o.OrderCount
 				pairData.BidPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 			}
 		}
 
 		for _, o := range asksData {
-			if o.AddressCode() == p.AddressCode() {
-				pairData.OrderVolume = math.Add(pairData.OrderVolume, o.OrderVolume)
-				pairData.OrderCount = math.Add(pairData.OrderCount, o.OrderCount)
+			if o.AssetCode() == p.AssetCode() {
+				pairData.OrderVolume += o.OrderVolume
+				pairData.OrderCount += o.OrderCount
 				pairData.AskPrice = o.BestPrice
-				pairData.AverageOrderAmount = math.Div(pairData.OrderVolume, pairData.OrderCount)
+				pairData.AverageOrderAmount = (pairData.OrderVolume / pairData.OrderCount)
 
 				//TODO change price into orderbook price
-				if math.IsNotEqual(pairData.BidPrice, big.NewInt(0)) && math.IsNotEqual(pairData.AskPrice, big.NewInt(0)) {
-					pairData.Price = math.Avg(pairData.BidPrice, pairData.AskPrice)
+				if pairData.BidPrice != 0 && pairData.AskPrice != 0 {
+					pairData.Price = (pairData.BidPrice + pairData.AskPrice) / 2
 				} else {
-					pairData.Price = big.NewInt(0)
+					pairData.Price = 0
 				}
 			}
 		}

@@ -5,19 +5,20 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Proofsuite/amp-matching-engine/interfaces"
-	"github.com/Proofsuite/amp-matching-engine/rabbitmq"
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils"
+	"github.com/byteball/odex-backend/interfaces"
+	"github.com/byteball/odex-backend/rabbitmq"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 )
 
 // Engine
 type Engine struct {
-	orderbooks   map[string]*OrderBook
-	rabbitMQConn *rabbitmq.Connection
-	orderDao     interfaces.OrderDao
-	tradeDao     interfaces.TradeDao
-	pairDao      interfaces.PairDao
+	orderbooks    map[string]*OrderBook
+	rabbitMQConn  *rabbitmq.Connection
+	orderDao      interfaces.OrderDao
+	tradeDao      interfaces.TradeDao
+	pairDao       interfaces.PairDao
+	obyteProvider interfaces.ObyteProvider
 }
 
 var logger = utils.EngineLogger
@@ -28,6 +29,7 @@ func NewEngine(
 	orderDao interfaces.OrderDao,
 	tradeDao interfaces.TradeDao,
 	pairDao interfaces.PairDao,
+	obyteProvider interfaces.ObyteProvider,
 ) *Engine {
 	pairs, err := pairDao.GetAll()
 
@@ -38,11 +40,12 @@ func NewEngine(
 	obs := map[string]*OrderBook{}
 	for _, p := range pairs {
 		ob := &OrderBook{
-			rabbitMQConn: rabbitMQConn,
-			orderDao:     orderDao,
-			tradeDao:     tradeDao,
-			pair:         &p,
-			mutex:        &sync.Mutex{},
+			rabbitMQConn:  rabbitMQConn,
+			orderDao:      orderDao,
+			tradeDao:      tradeDao,
+			pair:          &p,
+			mutex:         &sync.Mutex{},
+			obyteProvider: obyteProvider,
 		}
 
 		obs[p.Code()] = ob
@@ -54,6 +57,7 @@ func NewEngine(
 		orderDao,
 		tradeDao,
 		pairDao,
+		obyteProvider,
 	}
 
 	return engine
@@ -62,6 +66,7 @@ func NewEngine(
 // HandleOrders parses incoming rabbitmq order messages and redirects them to the appropriate
 // engine function
 func (e *Engine) HandleOrders(msg *rabbitmq.Message) error {
+	//logger.Info("HandleOrders", msg)
 	switch msg.Type {
 	case "NEW_ORDER":
 		err := e.handleNewOrder(msg.Data)
@@ -81,18 +86,18 @@ func (e *Engine) HandleOrders(msg *rabbitmq.Message) error {
 			logger.Error(err)
 			return err
 		}
-	case "INVALIDATE_MAKER_ORDERS":
-		err := e.handleInvalidateMakerOrders(msg.Data)
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
-	case "INVALIDATE_TAKER_ORDERS":
-		err := e.handleInvalidateTakerOrders(msg.Data)
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
+	// case "INVALIDATE_MAKER_ORDERS":
+	// 	err := e.handleInvalidateMakerOrders(msg.Data)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
+	// case "INVALIDATE_TAKER_ORDERS":
+	// 	err := e.handleInvalidateTakerOrders(msg.Data)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 	default:
 		logger.Error("Unknown message", msg)
 	}
@@ -144,17 +149,18 @@ func (e *Engine) handleNewOrder(bytes []byte) error {
 
 	ob := e.orderbooks[code]
 	if ob == nil {
-		p, err := e.pairDao.GetByTokenAddress(o.BaseToken, o.QuoteToken)
+		p, err := e.pairDao.GetByAsset(o.BaseToken, o.QuoteToken)
 		if err != nil {
 			return errors.New("Unknown pair")
 		}
 
 		e.orderbooks[code] = &OrderBook{
-			rabbitMQConn: e.rabbitMQConn,
-			orderDao:     e.orderDao,
-			tradeDao:     e.tradeDao,
-			pair:         p,
-			mutex:        &sync.Mutex{},
+			rabbitMQConn:  e.rabbitMQConn,
+			orderDao:      e.orderDao,
+			tradeDao:      e.tradeDao,
+			pair:          p,
+			mutex:         &sync.Mutex{},
+			obyteProvider: e.obyteProvider,
 		}
 
 		ob = e.orderbooks[code]
@@ -197,7 +203,7 @@ func (e *Engine) handleCancelOrder(bytes []byte) error {
 	return nil
 }
 
-func (e *Engine) handleInvalidateMakerOrders(bytes []byte) error {
+/*func (e *Engine) handleInvalidateMakerOrders(bytes []byte) error {
 	m := types.Matches{}
 	err := json.Unmarshal(bytes, &m)
 	if err != nil {
@@ -223,9 +229,9 @@ func (e *Engine) handleInvalidateMakerOrders(bytes []byte) error {
 	}
 
 	return nil
-}
+}*/
 
-func (e *Engine) handleInvalidateTakerOrders(bytes []byte) error {
+/*func (e *Engine) handleInvalidateTakerOrders(bytes []byte) error {
 	m := types.Matches{}
 	err := json.Unmarshal(bytes, &m)
 	if err != nil {
@@ -252,4 +258,4 @@ func (e *Engine) handleInvalidateTakerOrders(bytes []byte) error {
 	}
 
 	return nil
-}
+}*/

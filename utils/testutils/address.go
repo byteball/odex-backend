@@ -1,15 +1,13 @@
 package testutils
 
-import "github.com/ethereum/go-ethereum/common"
-
-func GetTestAddress1() common.Address {
-	return common.HexToAddress("0x1")
+func GetTestAddress1() string {
+	return "TEST_ADDR1"
 }
 
-func GetTestAddress2() common.Address {
-	return common.HexToAddress("0x2")
+func GetTestAddress2() string {
+	return "TEST_ADDR2"
 }
 
-func GetTestAddress3() common.Address {
-	return common.HexToAddress("0x3")
+func GetTestAddress3() string {
+	return "TEST_ADDR3"
 }

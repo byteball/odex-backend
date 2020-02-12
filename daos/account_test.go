@@ -2,14 +2,12 @@ package daos
 
 import (
 	"io/ioutil"
-	"math/big"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
 	"github.com/globalsign/mgo/bson"
+	"github.com/stretchr/testify/assert"
 )
 
 // var db *Database
@@ -34,32 +32,30 @@ func TestAccountDao(t *testing.T) {
 	dao := NewAccountDao()
 	dao.Drop()
 
-	address := common.HexToAddress("0xe8e84ee367bc63ddb38d3d01bccef106c194dc47")
-	tokenAddress1 := common.HexToAddress("0xcf7389dc6c63637598402907d5431160ec8972a5")
-	tokenAddress2 := common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa")
+	address := "0xe8e84ee367bc63ddb38d3d01bccef106c194dc47"
+	asset1 := "0xcf7389dc6c63637598402907d5431160ec8972a5"
+	asset2 := "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"
 
 	tokenBalance1 := &types.TokenBalance{
-		Address:       tokenAddress1,
+		Asset:         asset1,
 		Symbol:        "EOS",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	tokenBalance2 := &types.TokenBalance{
-		Address:       tokenAddress2,
+		Asset:         asset2,
 		Symbol:        "ZRX",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	account := &types.Account{
 		ID:      bson.NewObjectId(),
 		Address: address,
-		TokenBalances: map[common.Address]*types.TokenBalance{
-			tokenAddress1: tokenBalance1,
-			tokenAddress2: tokenBalance2,
+		TokenBalances: map[string]*types.TokenBalance{
+			asset1: tokenBalance1,
+			asset2: tokenBalance2,
 		},
 		IsBlocked: false,
 	}
@@ -81,32 +77,30 @@ func TestAccountGetAllTokenBalances(t *testing.T) {
 	dao := NewAccountDao()
 	dao.Drop()
 
-	address := common.HexToAddress("0xe8e84ee367bc63ddb38d3d01bccef106c194dc47")
-	tokenAddress1 := common.HexToAddress("0xcf7389dc6c63637598402907d5431160ec8972a5")
-	tokenAddress2 := common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa")
+	address := "0xe8e84ee367bc63ddb38d3d01bccef106c194dc47"
+	asset1 := "0xcf7389dc6c63637598402907d5431160ec8972a5"
+	asset2 := "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"
 
 	tokenBalance1 := &types.TokenBalance{
-		Address:       tokenAddress1,
+		Asset:         asset1,
 		Symbol:        "EOS",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	tokenBalance2 := &types.TokenBalance{
-		Address:       tokenAddress2,
+		Asset:         asset2,
 		Symbol:        "ZRX",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	account := &types.Account{
 		ID:      bson.NewObjectId(),
 		Address: address,
-		TokenBalances: map[common.Address]*types.TokenBalance{
-			tokenAddress1: tokenBalance1,
-			tokenAddress2: tokenBalance2,
+		TokenBalances: map[string]*types.TokenBalance{
+			asset1: tokenBalance1,
+			asset2: tokenBalance2,
 		},
 		IsBlocked: false,
 	}
@@ -121,40 +115,38 @@ func TestAccountGetAllTokenBalances(t *testing.T) {
 		t.Errorf("Could not retrieve token balances: %v", balances)
 	}
 
-	assert.Equal(t, balances[tokenAddress1], tokenBalance1)
-	assert.Equal(t, balances[tokenAddress2], tokenBalance2)
+	assert.Equal(t, balances[asset1], tokenBalance1)
+	assert.Equal(t, balances[asset2], tokenBalance2)
 }
 
 func TestGetTokenBalance(t *testing.T) {
 	dao := NewAccountDao()
 	dao.Drop()
 
-	address := common.HexToAddress("0xe8e84ee367bc63ddb38d3d01bccef106c194dc47")
-	tokenAddress1 := common.HexToAddress("0xcf7389dc6c63637598402907d5431160ec8972a5")
-	tokenAddress2 := common.HexToAddress("0xe41d2489571d322189246dafa5ebde1f4699f498")
+	address := "0xe8e84ee367bc63ddb38d3d01bccef106c194dc47"
+	asset1 := "0xcf7389dc6c63637598402907d5431160ec8972a5"
+	asset2 := "0xe41d2489571d322189246dafa5ebde1f4699f498"
 
 	tokenBalance1 := &types.TokenBalance{
-		Address:       tokenAddress1,
+		Asset:         asset1,
 		Symbol:        "EOS",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	tokenBalance2 := &types.TokenBalance{
-		Address:       tokenAddress2,
+		Asset:         asset2,
 		Symbol:        "ZRX",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	account := &types.Account{
 		ID:      bson.NewObjectId(),
 		Address: address,
-		TokenBalances: map[common.Address]*types.TokenBalance{
-			tokenAddress1: tokenBalance1,
-			tokenAddress2: tokenBalance2,
+		TokenBalances: map[string]*types.TokenBalance{
+			asset1: tokenBalance1,
+			asset2: tokenBalance2,
 		},
 		IsBlocked: false,
 	}
@@ -164,7 +156,7 @@ func TestGetTokenBalance(t *testing.T) {
 		t.Errorf("Could not create account: %v", err)
 	}
 
-	balance, err := dao.GetTokenBalance(address, tokenAddress2)
+	balance, err := dao.GetTokenBalance(address, asset2)
 	if err != nil {
 		t.Errorf("Could not get token balance: %v", err)
 	}
@@ -176,32 +168,30 @@ func TestUpdateAccountBalance(t *testing.T) {
 	dao := NewAccountDao()
 	dao.Drop()
 
-	address := common.HexToAddress("0xe8e84ee367bc63ddb38d3d01bccef106c194dc47")
-	tokenAddress1 := common.HexToAddress("0xcf7389dc6c63637598402907d5431160ec8972a5")
-	tokenAddress2 := common.HexToAddress("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa")
+	address := "0xe8e84ee367bc63ddb38d3d01bccef106c194dc47"
+	asset1 := "0xcf7389dc6c63637598402907d5431160ec8972a5"
+	asset2 := "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa"
 
 	tokenBalance1 := &types.TokenBalance{
-		Address:       tokenAddress1,
+		Asset:         asset1,
 		Symbol:        "EOS",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	tokenBalance2 := &types.TokenBalance{
-		Address:       tokenAddress2,
+		Asset:         asset2,
 		Symbol:        "ZRX",
-		Balance:       big.NewInt(10000),
-		Allowance:     big.NewInt(10000),
-		LockedBalance: big.NewInt(5000),
+		Balance:       10000,
+		LockedBalance: 5000,
 	}
 
 	account := &types.Account{
 		ID:      bson.NewObjectId(),
 		Address: address,
-		TokenBalances: map[common.Address]*types.TokenBalance{
-			tokenAddress1: tokenBalance1,
-			tokenAddress2: tokenBalance2,
+		TokenBalances: map[string]*types.TokenBalance{
+			asset1: tokenBalance1,
+			asset2: tokenBalance2,
 		},
 		IsBlocked: false,
 	}
@@ -211,15 +201,15 @@ func TestUpdateAccountBalance(t *testing.T) {
 		t.Errorf("Could not create account object")
 	}
 
-	err = dao.UpdateBalance(address, tokenAddress1, big.NewInt(20000))
+	err = dao.UpdateBalance(address, asset1, 20000)
 	if err != nil {
 		t.Errorf("Could not update balance")
 	}
 
-	balance, err := dao.GetTokenBalance(address, tokenAddress1)
+	balance, err := dao.GetTokenBalance(address, asset1)
 	if err != nil {
 		t.Errorf("Could not get token balance: %v", err)
 	}
 
-	assert.Equal(t, balance.Balance, big.NewInt(20000))
+	assert.Equal(t, balance.Balance, int64(20000))
 }

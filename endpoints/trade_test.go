@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
-	"github.com/Proofsuite/amp-matching-engine/types"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils"
-	"github.com/Proofsuite/amp-matching-engine/utils/testutils/mocks"
+	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"github.com/byteball/odex-backend/utils/testutils/mocks"
 	"github.com/gorilla/mux"
 )
 
@@ -22,18 +23,21 @@ func SetupTradeTest() (*mux.Router, *mocks.TradeService) {
 }
 
 func TestHandleGetTradeHistory(t *testing.T) {
-	router, tradeService := SetupTest()
+	router, tradeService := SetupTradeTest()
 
 	t1 := testutils.GetTestZRXToken()
 	t2 := testutils.GetTestWETHToken()
 
 	tr1 := types.Trade{}
 	tr2 := types.Trade{}
-	trs := []types.Trade{tr1, tr2}
+	trs := []*types.Trade{&tr1, &tr2}
 
-	tradeService.On("GetByPairAddress", t1.Address, t2.Address).Returns(trs)
+	tradeService.On("GetSortedTrades", t1.Asset, t2.Asset, 20).Return(trs, nil)
 
-	req, err := http.NewRequest("GET", "/trades/history/{")
+	req, err := http.NewRequest("GET", "/trades/pair?baseToken="+url.QueryEscape(t1.Asset)+"&quoteToken="+url.QueryEscape(t2.Asset), nil)
+	if err != nil {
+		t.Error(err)
+	}
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -42,6 +46,6 @@ func TestHandleGetTradeHistory(t *testing.T) {
 		t.Errorf("Handler return wrong status. Got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	json.NewDecoder()
+	json.NewDecoder(rr.Body)
 
 }
