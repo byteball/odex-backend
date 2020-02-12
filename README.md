@@ -182,7 +182,7 @@ If you have questions, ideas or suggestions, you can reach the development team 
 
 ## Credits
 
-ODEX backend is based on [AMP Exchange](https://github.com/byteball/odex-backend), the most beautiful and easy to use decentralized exchange.
+ODEX backend is based on [AMP Exchange](https://github.com/Proofsuite/amp-matching-engine), the most beautiful and easy to use decentralized exchange.
 
 # License
 
