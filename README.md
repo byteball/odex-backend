@@ -1,34 +1,32 @@
-# ODEX Matching Engine
-ODEX decentralized exchange matching engine
+# ODEX Backend
 
-[![Chat on discord](https://img.shields.io/discord/308323056592486420.svg?logo=discord)](https://discord.obyte.org/)
+[![Chat on discord](https://img.shields.io/discord/534371689996222485.svg?logo=discord)](https://discord.gg/qHHST4e)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)
 
 # The ODEX Decentralized Exchange
 
-The ODEX decentralized exchange is a hybrid decentralized exchange that aims at bringing together the ease of use of centralized exchanges along with the security and privacy features of decentralized exchanges. Orders are matched through the an off-chain orderbook. After orders are matched and signed, the decentralized exchange operator has the sole ability to perform a transaction to the AA. This provides for the best UX as the exchange operator is the only party having to interact directly with the blockchain. Exchange users simply sign orders which are broadcasted then to the orderbook. This design enables users to queue and cancel their orders seamlessly.
+The ODEX decentralized exchange is a hybrid decentralized exchange that aims at bringing together the ease of use of centralized exchanges along with the security and privacy features of decentralized exchanges. Orders are matched through an off-chain orderbook. After orders are matched and signed, the decentralized exchange operator has the sole ability to perform a transaction to the AA. This provides for the best UX as the exchange operator is the only party having to interact directly with the blockchain. Exchange users simply sign orders which are broadcasted then to the orderbook. This design enables users to queue and cancel their orders seamlessly.
 
+Several matchers can operate exchanges based on ODEX technology at the same time. They share their orderbooks and exchange all new orders among themselves, thus improving liquidity for all ODEX exchanges. An order can be submitted through any ODEX exchange, however to be matched, both maker and taker orders have to indicate the same matcher. The exchange that was used to submit the order serves as an affliate and can charge a fee from its users.  Anyone can become a matcher or affiliate, or just watch the orders that are being exchanged among the matchers and detect any possible misbehavior by matchers.
 
 # Getting Started
 
 ## Requirements
 
-- **mongoDB** version 3.6 or newer
-- **rabbitmq** version 3.7.7 or newer
-- **dep** latest
+- **mongoDB** version 3.6 or newer ([installation instructions for ubuntu](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/))
+- **rabbitmq** version 3.7.7 or newer ([installation instructions for ubuntu](https://computingforgeeks.com/how-to-install-latest-rabbitmq-server-on-ubuntu-18-04-lts/))
+- **golang** latest ([installation instructions for ubuntu](https://github.com/golang/go/wiki/Ubuntu))
 
-## Booting up the server
+## Install
 
-**Install the dependencies**
 ```
-dep ensure
+go get https://github.com/byteball/odex-backend
 ```
 
-**Start the Server**
-```
-go run server.go
-```
+## Run
+You don't run the backend directly. Run [ODEX wallet](https://github.com/byteball/odex-wallet) and it will launch the backend automatically.
+
 
 # API Endpoints
 
