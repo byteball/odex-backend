@@ -224,6 +224,10 @@ func (o *Order) TotalRequiredSellAmount(p *Pair) int64 {
 		requiredSellTokenAmount = o.Amount
 	}
 
+	if o.SellToken() == "base" {
+		requiredSellTokenAmount += 10 * 1000 // add AA fees for 10 trades
+	}
+
 	return requiredSellTokenAmount
 }
 
