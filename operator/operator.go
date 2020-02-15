@@ -236,7 +236,15 @@ func (op *Operator) HandleEvents() error {
 					break
 				}
 				trigger_unit := data["trigger_unit"].(string)
-				bounced := int(data["bounced"].(float64))
+				bounced := false
+				switch data["bounced"].(type) {
+				case float64:
+					bounced = (int(data["bounced"].(float64)) == 1)
+				case bool:
+					bounced = data["bounced"].(bool)
+				default:
+					panic("unrecognized type of bounced")
+				}
 				response := data["response"].(map[string]interface{})
 
 				trades, err := op.TradeService.GetByTriggerUnitHash(trigger_unit)
@@ -269,7 +277,7 @@ func (op *Operator) HandleEvents() error {
 					Trades:      trades,
 				}
 
-				if bounced == 1 {
+				if bounced {
 					bounceMessage := response["error"].(string)
 					op.HandleTxError(matches, bounceMessage) // will also update status to REJECTED
 					// the wallet sends balance updates only after successful trades
