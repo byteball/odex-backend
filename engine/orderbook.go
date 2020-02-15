@@ -337,22 +337,23 @@ func (ob *OrderBook) cancelOrder(o *types.Order) error {
 	ob.mutex.Lock()
 	defer ob.mutex.Unlock()
 
-	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" {
+	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
 		o.Status = "CANCELLED"
-	}
-	err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
-	if err != nil {
-		logger.Error(err)
-		return err
+		err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
 	}
 
+	// todo: another engine response when the order was already cancelled or filled
 	res := &types.EngineResponse{
 		Status:  "ORDER_CANCELLED",
 		Order:   o,
 		Matches: nil,
 	}
 
-	err = ob.rabbitMQConn.PublishEngineResponse(res)
+	err := ob.rabbitMQConn.PublishEngineResponse(res)
 	if err != nil {
 		logger.Error(err)
 		return err
