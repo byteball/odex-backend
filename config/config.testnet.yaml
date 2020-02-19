@@ -6,8 +6,8 @@ MONGODB_DBNAME: odex_test
 ENABLE_TLS: "false"
 SERVER_PORT: 8081
 
-OBYTE_NODE_HTTP_URL: http://localhost:6333
-OBYTE_NODE_WS_URL: ws://localhost:6333
+OBYTE_NODE_HTTP_URL: http://localhost:16333
+OBYTE_NODE_WS_URL: ws://localhost:16333
 
 
 logs:
