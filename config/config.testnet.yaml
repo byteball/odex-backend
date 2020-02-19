@@ -2,7 +2,7 @@
 
 RABBITMQ_URL: localhost
 MONGODB_URL: localhost
-MONGODB_DBNAME: odex
+MONGODB_DBNAME: odex_test
 ENABLE_TLS: "false"
 SERVER_PORT: 8081
 
