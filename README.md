@@ -21,7 +21,7 @@ Several matchers can operate exchanges based on ODEX technology at the same time
 ## Install
 
 ```
-go get https://github.com/byteball/odex-backend
+go get github.com/byteball/odex-backend
 ```
 
 ## Run
