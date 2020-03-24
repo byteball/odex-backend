@@ -202,7 +202,7 @@ func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string
 	o, err := s.orderDao.GetByHash(oc.OrderHash)
 
 	if err == nil && o == nil {
-		err = errors.New("failed to find the order to be cancelled")
+		err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
 	}
 
 	if err != nil {
