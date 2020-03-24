@@ -54,6 +54,15 @@ func readHandler(c *Client) {
 		return nil
 	})
 
+	msgs := make(chan types.WebsocketMessage, 100)
+	defer close(msgs)
+	go func() {
+		for msg := range msgs {
+			socketChannels[msg.Channel](msg.Event, c)
+		}
+		logger.Info("done processing msgs chan")
+	}()
+
 	for {
 		msgType, payload, err := c.ReadMessage()
 		if err != nil {
@@ -83,7 +92,8 @@ func readHandler(c *Client) {
 			return
 		}
 
-		go socketChannels[msg.Channel](msg.Event, c)
+		msgs <- msg
+		//go socketChannels[msg.Channel](msg.Event, c)
 	}
 }
 
