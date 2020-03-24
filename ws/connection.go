@@ -54,7 +54,7 @@ func readHandler(c *Client) {
 		return nil
 	})
 
-	msgs := make(chan types.WebsocketMessage, 100)
+	msgs := make(chan *types.WebsocketMessage, 100)
 	defer close(msgs)
 	go func() {
 		for msg := range msgs {
@@ -92,7 +92,7 @@ func readHandler(c *Client) {
 			return
 		}
 
-		msgs <- msg
+		msgs <- &msg
 		//go socketChannels[msg.Channel](msg.Event, c)
 	}
 }
