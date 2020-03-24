@@ -181,7 +181,9 @@ func (e *orderEndpoint) ws(input interface{}, c *ws.Client) {
 
 // handleNewOrder handles NewOrder message. New order messages are transmitted to the order service after being unmarshalled
 func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
+	c.RpcMutex.Lock()
 	_, err := e.obyteProvider.AddOrder(&ev.Payload)
+	c.RpcMutex.Unlock()
 	if err != nil {
 		logger.Error(err)
 		//payload := map[string]string{"hash": hash, "error": err.Error()}
@@ -228,7 +230,9 @@ func (e *orderEndpoint) handleNewOrder(ev *types.WebsocketEvent, c *ws.Client) {
 
 // handleCancelOrder handles CancelOrder message.
 func (e *orderEndpoint) handleCancelOrder(ev *types.WebsocketEvent, c *ws.Client) {
+	c.RpcMutex.Lock()
 	err := e.obyteProvider.CancelOrder(&ev.Payload)
+	c.RpcMutex.Unlock()
 	if err != nil {
 		logger.Error(err)
 		go c.SendMessage(ws.OrderChannel, "ERROR", err.Error())

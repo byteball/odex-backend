@@ -9,8 +9,9 @@ import (
 
 type Client struct {
 	*websocket.Conn
-	mu   sync.Mutex
-	send chan types.WebsocketMessage
+	mu       sync.Mutex
+	RpcMutex sync.Mutex
+	send     chan types.WebsocketMessage
 }
 
 // TODO: refactor into non-global variables
@@ -20,7 +21,7 @@ var subscriptionMutex sync.Mutex
 func NewClient(c *websocket.Conn) *Client {
 	subscriptionMutex.Lock()
 	defer subscriptionMutex.Unlock()
-	conn := &Client{Conn: c, mu: sync.Mutex{}, send: make(chan types.WebsocketMessage)}
+	conn := &Client{Conn: c, mu: sync.Mutex{}, RpcMutex: sync.Mutex{}, send: make(chan types.WebsocketMessage)}
 
 	if unsubscribeHandlers == nil {
 		unsubscribeHandlers = make(map[*Client][]func(*Client))
