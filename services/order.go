@@ -177,7 +177,10 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 	}*/
 
 	if o == nil {
-		return errors.New("No order with corresponding hash")
+		o = s.ordersInThePipeline[oc.OrderHash]
+		if o == nil {
+			return errors.New("No order with corresponding hash: " + oc.OrderHash)
+		}
 	}
 
 	if o.Status == "FILLED" || o.Status == "ERROR" || o.Status == "CANCELLED" {
