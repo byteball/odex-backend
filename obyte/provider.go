@@ -107,6 +107,7 @@ func (o *ObyteProvider) Decimals(token string) (uint8, error) {
 }
 
 func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
+	log.Println("will rpc addOrder")
 	var hash string // order hash
 	err := o.Client.CallFor(&hash, "addOrder", signedOrder)
 	if err != nil {
@@ -117,6 +118,7 @@ func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 }
 
 func (o *ObyteProvider) CancelOrder(signedCancel *interface{}) error {
+	log.Println("will rpc cancelOrder")
 	var resp string
 	err := o.Client.CallFor(&resp, "cancelOrder", signedCancel)
 

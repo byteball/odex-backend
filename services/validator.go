@@ -67,7 +67,7 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 
 	//Sell Token Balance
 	if sellTokenBalance < totalRequiredAmount {
-		return fmt.Errorf("Insufficient %v Balance %v < %v", o.SellTokenSymbol(), sellTokenBalance, totalRequiredAmount)
+		return fmt.Errorf("Insufficient %v Balance: have %v, need %v for order %v at %v", o.SellTokenSymbol(), sellTokenBalance, totalRequiredAmount, o.Hash, o.Price)
 	}
 
 	sellTokenLockedBalance, err := s.orderDao.GetUserLockedBalance(o.UserAddress, o.SellToken())
@@ -79,7 +79,7 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 	availableSellTokenBalance := sellTokenBalance - sellTokenLockedBalance
 
 	if availableSellTokenBalance < totalRequiredAmount {
-		return fmt.Errorf("Insufficient %v available %v < %v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount)
+		return fmt.Errorf("Insufficient %v available: have %v, need %v for order %v at %v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount, o.Hash, o.Price)
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func (s *ValidatorService) ValidateBalance(o *types.Order) error {
 
 	//Sell Token Balance
 	if sellTokenBalance < totalRequiredAmount {
-		return fmt.Errorf("Insufficient %v Balance %v < %v", o.SellTokenSymbol(), sellTokenBalance, totalRequiredAmount)
+		return fmt.Errorf("Insufficient %v Balance: have %v, need %v for order %v at %v", o.SellTokenSymbol(), sellTokenBalance, totalRequiredAmount, o.Hash, o.Price)
 	}
 
 	return nil
