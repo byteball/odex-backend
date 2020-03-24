@@ -21,14 +21,15 @@ import (
 
 // OrderService
 type OrderService struct {
-	orderDao      interfaces.OrderDao
-	pairDao       interfaces.PairDao
-	accountDao    interfaces.AccountDao
-	tradeDao      interfaces.TradeDao
-	engine        interfaces.Engine
-	validator     interfaces.ValidatorService
-	broker        *rabbitmq.Connection
-	orderChannels map[string]chan *types.WebsocketEvent
+	orderDao            interfaces.OrderDao
+	pairDao             interfaces.PairDao
+	accountDao          interfaces.AccountDao
+	tradeDao            interfaces.TradeDao
+	engine              interfaces.Engine
+	validator           interfaces.ValidatorService
+	broker              *rabbitmq.Connection
+	orderChannels       map[string]chan *types.WebsocketEvent
+	ordersInThePipeline map[string]*types.Order
 }
 
 // NewOrderService returns a new instance of orderservice
@@ -43,6 +44,7 @@ func NewOrderService(
 ) *OrderService {
 
 	orderChannels := make(map[string]chan *types.WebsocketEvent)
+	ordersInThePipeline := make(map[string]*types.Order)
 
 	return &OrderService{
 		orderDao,
@@ -53,6 +55,7 @@ func NewOrderService(
 		validator,
 		broker,
 		orderChannels,
+		ordersInThePipeline,
 	}
 }
 
@@ -92,7 +95,14 @@ func (s *OrderService) GetHistoryByUserAddress(addr string, limit ...int) ([]*ty
 // funds and order data.
 // If valid: Order is inserted in DB with order status as new and order is publiched
 // on rabbitmq queue for matching engine to process the order
-func (s *OrderService) NewOrder(o *types.Order) error {
+func (s *OrderService) NewOrder(o *types.Order) (e error) {
+	s.ordersInThePipeline[o.Hash] = o
+	defer func() {
+		if e != nil {
+			delete(s.ordersInThePipeline, o.Hash)
+		}
+	}()
+
 	if err := o.Validate(); err != nil {
 		logger.Error(err)
 		return err
@@ -202,7 +212,10 @@ func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string
 	o, err := s.orderDao.GetByHash(oc.OrderHash)
 
 	if err == nil && o == nil {
-		err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
+		o = s.ordersInThePipeline[oc.OrderHash]
+		if o == nil {
+			err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
+		}
 	}
 
 	if err != nil {
@@ -287,6 +300,7 @@ func (s *OrderService) handleOrderCancelled(res *types.EngineResponse) {
 // HandleEngineResponse listens to messages incoming from the engine and handles websocket
 // responses and database updates accordingly
 func (s *OrderService) HandleEngineResponse(res *types.EngineResponse) error {
+	delete(s.ordersInThePipeline, res.Order.Hash)
 	switch res.Status {
 	case "ERROR":
 		s.handleEngineError(res)
