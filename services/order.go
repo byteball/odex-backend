@@ -170,8 +170,18 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 		return errors.New("No order with corresponding hash")
 	}
 
-	if o.Status == "FILLED" || o.Status == "ERROR" || o.Status == "CANCEL" {
+	if o.Status == "FILLED" || o.Status == "ERROR" || o.Status == "CANCELLED" {
 		return fmt.Errorf("Cannot cancel order. Status is %v", o.Status)
+	}
+
+	// update order status early to make sure new orders see the freed-up balance.
+	// The status will be updated again after going through rabbitmq
+	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
+		err := s.orderDao.UpdateOrderStatus(o.Hash, "CANCELLED")
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
 	}
 
 	err = s.broker.PublishCancelOrderMessage(o)
