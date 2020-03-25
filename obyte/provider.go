@@ -6,6 +6,7 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/gorilla/websocket"
 	"github.com/ybbus/jsonrpc"
 )
@@ -107,7 +108,7 @@ func (o *ObyteProvider) Decimals(token string) (uint8, error) {
 }
 
 func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
-	log.Println("will rpc addOrder", signedOrder)
+	log.Println("will rpc addOrder", utils.JSON(signedOrder))
 	var hash string // order hash
 	err := o.Client.CallFor(&hash, "addOrder", signedOrder)
 	if err != nil {
@@ -118,7 +119,7 @@ func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 }
 
 func (o *ObyteProvider) CancelOrder(signedCancel *interface{}) error {
-	log.Println("will rpc cancelOrder", signedCancel)
+	log.Println("will rpc cancelOrder", utils.JSON(signedCancel))
 	var resp string
 	err := o.Client.CallFor(&resp, "cancelOrder", signedCancel)
 

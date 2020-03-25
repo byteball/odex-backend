@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/gorilla/websocket"
 )
 
@@ -58,7 +59,7 @@ func readHandler(c *Client) {
 	defer close(msgs)
 	go func() {
 		for msg := range msgs {
-			logger.Info("msgs buffer length: ", len(msgs), ", will process msg", msg.String())
+			logger.Info("msgs buffer length: ", len(msgs), ", will process msg", utils.JSON(msg))
 			socketChannels[msg.Channel](msg.Event, c)
 		}
 		logger.Info("done processing msgs chan")
