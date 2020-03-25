@@ -176,10 +176,13 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 		return err
 	}*/
 
+	foundInDb := o != nil
 	if o == nil {
 		o = s.ordersInThePipeline[oc.OrderHash]
 		if o == nil {
 			return errors.New("No order with corresponding hash: " + oc.OrderHash)
+		} else {
+			logger.Info("to-be-cancelled order " + oc.OrderHash + " found in memory")
 		}
 	}
 
@@ -189,7 +192,7 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 
 	// update order status early to make sure new orders see the freed-up balance.
 	// The status will be updated again after going through rabbitmq
-	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
+	if foundInDb && o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
 		err := s.orderDao.UpdateOrderStatus(o.Hash, "CANCELLED")
 		if err != nil {
 			logger.Error(err)
