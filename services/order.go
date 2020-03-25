@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cast"
 
@@ -30,6 +31,7 @@ type OrderService struct {
 	broker              *rabbitmq.Connection
 	orderChannels       map[string]chan *types.WebsocketEvent
 	ordersInThePipeline map[string]*types.Order
+	mu                  sync.Mutex
 }
 
 // NewOrderService returns a new instance of orderservice
@@ -56,6 +58,7 @@ func NewOrderService(
 		broker,
 		orderChannels,
 		ordersInThePipeline,
+		sync.Mutex{},
 	}
 }
 
@@ -96,10 +99,14 @@ func (s *OrderService) GetHistoryByUserAddress(addr string, limit ...int) ([]*ty
 // If valid: Order is inserted in DB with order status as new and order is publiched
 // on rabbitmq queue for matching engine to process the order
 func (s *OrderService) NewOrder(o *types.Order) (e error) {
+	s.mu.Lock()
 	s.ordersInThePipeline[o.Hash] = o
+	s.mu.Unlock()
 	defer func() {
 		if e != nil {
+			s.mu.Lock()
 			delete(s.ordersInThePipeline, o.Hash)
+			s.mu.Unlock()
 		}
 	}()
 
@@ -178,7 +185,9 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 
 	foundInDb := o != nil
 	if o == nil {
+		s.mu.Lock()
 		o = s.ordersInThePipeline[oc.OrderHash]
+		s.mu.Unlock()
 		if o == nil {
 			return errors.New("No order with corresponding hash: " + oc.OrderHash)
 		} else {
@@ -218,7 +227,9 @@ func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string
 	o, err := s.orderDao.GetByHash(oc.OrderHash)
 
 	if err == nil && o == nil {
+		s.mu.Lock()
 		o = s.ordersInThePipeline[oc.OrderHash]
+		s.mu.Unlock()
 		if o == nil {
 			err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
 		}
@@ -306,7 +317,9 @@ func (s *OrderService) handleOrderCancelled(res *types.EngineResponse) {
 // HandleEngineResponse listens to messages incoming from the engine and handles websocket
 // responses and database updates accordingly
 func (s *OrderService) HandleEngineResponse(res *types.EngineResponse) error {
+	s.mu.Lock()
 	delete(s.ordersInThePipeline, res.Order.Hash)
+	s.mu.Unlock()
 	switch res.Status {
 	case "ERROR":
 		s.handleEngineError(res)
