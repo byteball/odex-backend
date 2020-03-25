@@ -26,7 +26,6 @@ func TestCancelOrder(t *testing.T) {
 		pairDao,
 		accountDao,
 		tradeDao,
-		engine,
 		validator,
 		amqp,
 	)

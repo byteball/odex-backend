@@ -26,7 +26,6 @@ type OrderService struct {
 	pairDao             interfaces.PairDao
 	accountDao          interfaces.AccountDao
 	tradeDao            interfaces.TradeDao
-	engine              interfaces.Engine
 	validator           interfaces.ValidatorService
 	broker              *rabbitmq.Connection
 	orderChannels       map[string]chan *types.WebsocketEvent
@@ -40,7 +39,6 @@ func NewOrderService(
 	pairDao interfaces.PairDao,
 	accountDao interfaces.AccountDao,
 	tradeDao interfaces.TradeDao,
-	engine interfaces.Engine,
 	validator interfaces.ValidatorService,
 	broker *rabbitmq.Connection,
 ) *OrderService {
@@ -53,7 +51,6 @@ func NewOrderService(
 		pairDao,
 		accountDao,
 		tradeDao,
-		engine,
 		validator,
 		broker,
 		orderChannels,

@@ -17,7 +17,6 @@ type OrderBookService struct {
 	pairDao  interfaces.PairDao
 	tokenDao interfaces.TokenDao
 	orderDao interfaces.OrderDao
-	eng      interfaces.Engine
 }
 
 // NewPairService returns a new instance of balance service
@@ -25,9 +24,8 @@ func NewOrderBookService(
 	pairDao interfaces.PairDao,
 	tokenDao interfaces.TokenDao,
 	orderDao interfaces.OrderDao,
-	eng interfaces.Engine,
 ) *OrderBookService {
-	return &OrderBookService{pairDao, tokenDao, orderDao, eng}
+	return &OrderBookService{pairDao, tokenDao, orderDao}
 }
 
 // GetOrderBook

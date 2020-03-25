@@ -125,9 +125,9 @@ func NewRouter(
 	priceService := services.NewPriceService()
 
 	infoService := services.NewInfoService(pairDao, tokenDao, tradeDao, orderDao, priceService)
-	pairService := services.NewPairService(pairDao, tokenDao, tradeDao, orderDao, eng, provider)
-	orderService := services.NewOrderService(orderDao, pairDao, accountDao, tradeDao, eng, validatorService, rabbitConn)
-	orderBookService := services.NewOrderBookService(pairDao, tokenDao, orderDao, eng)
+	pairService := services.NewPairService(pairDao, tokenDao, tradeDao, orderDao, provider)
+	orderService := services.NewOrderService(orderDao, pairDao, accountDao, tradeDao, validatorService, rabbitConn)
+	orderBookService := services.NewOrderBookService(pairDao, tokenDao, orderDao)
 	// cronService := crons.NewCronService(ohlcvService)
 
 	// deploy operator

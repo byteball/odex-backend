@@ -15,7 +15,6 @@ type PairService struct {
 	tokenDao interfaces.TokenDao
 	tradeDao interfaces.TradeDao
 	orderDao interfaces.OrderDao
-	eng      interfaces.Engine
 	provider interfaces.ObyteProvider
 }
 
@@ -25,11 +24,10 @@ func NewPairService(
 	tokenDao interfaces.TokenDao,
 	tradeDao interfaces.TradeDao,
 	orderDao interfaces.OrderDao,
-	eng interfaces.Engine,
 	provider interfaces.ObyteProvider,
 ) *PairService {
 
-	return &PairService{pairDao, tokenDao, tradeDao, orderDao, eng, provider}
+	return &PairService{pairDao, tokenDao, tradeDao, orderDao, provider}
 }
 
 func (s *PairService) CreatePairs(asset string) ([]*types.Pair, error) {
