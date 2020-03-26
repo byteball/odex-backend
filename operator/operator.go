@@ -122,7 +122,7 @@ func (op *Operator) HandleEvents() error {
 	for {
 		select {
 		case event := <-events:
-			logger.Info("Receiving event", utils.JSON(event))
+			logger.Info("Receiving event from wallet", utils.JSON(event))
 			arrData := event["data"].([]interface{})
 			data := arrData[0].(map[string]interface{})
 
@@ -137,7 +137,7 @@ func (op *Operator) HandleEvents() error {
 				ws.GetLoginSocket().LinkAddressToClient(sessionId, address)
 
 			case "new_order":
-				logger.Info("new order event", utils.JSON(data))
+				logger.Info("new order event from wallet", utils.JSON(data))
 				o := &types.Order{}
 
 				bytes, err := json.Marshal(arrData[0])
@@ -175,7 +175,7 @@ func (op *Operator) HandleEvents() error {
 				}
 
 			case "cancel_order":
-				logger.Info("cancel order event", utils.JSON(data))
+				logger.Info("cancel order event from wallet", utils.JSON(data))
 				oc := &types.OrderCancel{}
 
 				bytes, err := json.Marshal(arrData[0])

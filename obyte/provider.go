@@ -168,7 +168,7 @@ func (o *ObyteProvider) ListenToEvents() (chan map[string]interface{}, error) {
 				//log.Println("read:", err)
 				//return
 			}
-			log.Printf("recv: %s", message)
+			log.Printf("recv from wallet: %s", message)
 			var ev map[string]interface{}
 			err = json.Unmarshal(message, &ev)
 			if err != nil {
