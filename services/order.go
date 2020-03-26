@@ -206,6 +206,11 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 		}
 	}
 
+	if !foundInDb {
+		o.Status = "CANCELLED"
+		logger.Info("in-memeory order status set to CANCELLED")
+	}
+
 	err = s.broker.PublishCancelOrderMessage(o)
 	if err != nil {
 		logger.Error(err)
@@ -732,4 +737,13 @@ func (s *OrderService) AdjustBalancesForUncommittedTrades(address string, balanc
 	}
 
 	return balances
+}
+
+func (s *OrderService) FixOrderStatus(o *types.Order) {
+	s.mu.Lock()
+	memoryOrder := s.ordersInThePipeline[o.Hash]
+	s.mu.Unlock()
+	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
+		o.Status = "CANCELLED"
+	}
 }

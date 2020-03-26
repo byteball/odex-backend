@@ -51,10 +51,11 @@ func setupTest() (
 	pairDao := new(mocks.PairDao)
 	tradeDao := new(mocks.TradeDao)
 	obyteProvider := new(mocks.ObyteProvider)
+	orderService := new(mocks.OrderService)
 	pairDao.On("GetAll").Return([]types.Pair{*pair}, nil)
 	obyteProvider.On("GetOperatorAddress").Return(matcherAddress)
 
-	eng := NewEngine(rabbitConn, orderDao, tradeDao, pairDao, obyteProvider)
+	eng := NewEngine(rabbitConn, orderDao, tradeDao, pairDao, obyteProvider, orderService)
 	maker := testutils.GetTestWallet1()
 	taker := testutils.GetTestWallet2()
 	zrx := pair.BaseAsset

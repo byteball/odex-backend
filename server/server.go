@@ -113,9 +113,6 @@ func NewRouter(
 	tradeDao := daos.NewTradeDao()
 	accountDao := daos.NewAccountDao()
 
-	// instantiate engine
-	eng := engine.NewEngine(rabbitConn, orderDao, tradeDao, pairDao, provider)
-
 	// get services for injection
 	accountService := services.NewAccountService(accountDao, tokenDao)
 	ohlcvService := services.NewOHLCVService(tradeDao)
@@ -129,6 +126,9 @@ func NewRouter(
 	orderService := services.NewOrderService(orderDao, pairDao, accountDao, tradeDao, validatorService, rabbitConn)
 	orderBookService := services.NewOrderBookService(pairDao, tokenDao, orderDao)
 	// cronService := crons.NewCronService(ohlcvService)
+
+	// instantiate engine
+	eng := engine.NewEngine(rabbitConn, orderDao, tradeDao, pairDao, provider, orderService)
 
 	// deploy operator
 	op, err := operator.NewOperator(

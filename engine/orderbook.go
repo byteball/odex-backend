@@ -41,6 +41,7 @@ type OrderBook struct {
 	pair          *types.Pair
 	mutex         *sync.Mutex
 	obyteProvider interfaces.ObyteProvider
+	orderService  interfaces.OrderService
 }
 
 // newOrder calls buyOrder/sellOrder based on type of order recieved and
@@ -80,6 +81,8 @@ func (ob *OrderBook) addOrder(o *types.Order) error {
 	if o.FilledAmount == 0 {
 		o.Status = "OPEN"
 	}
+
+	ob.orderService.FixOrderStatus(o)
 
 	_, err := ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
@@ -137,6 +140,7 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 	}
 
 	//TODO refactor
+	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
 		logger.Error(err)
@@ -196,6 +200,7 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 	}
 
 	//TODO refactor
+	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
 		logger.Error(err)
@@ -337,11 +342,11 @@ func (ob *OrderBook) cancelOrder(o *types.Order) error {
 	ob.mutex.Lock()
 	defer ob.mutex.Unlock()
 
-	if o.Status != "CANCELLED" && o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
+	if o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
 		o.Status = "CANCELLED"
 		err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
 		if err != nil {
-			logger.Error(err)
+			logger.Error(err, "when cancelling order", o.Hash)
 			return err
 		}
 	}

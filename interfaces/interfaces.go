@@ -142,6 +142,7 @@ type OrderService interface {
 	CheckIfBalancesAreSufficientAndCancel(address string, balances map[string]int64)
 	CancelOrdersSignedByRevokedSigner(address string, signer string)
 	AdjustBalancesForUncommittedTrades(address string, balances map[string]int64) map[string]int64
+	FixOrderStatus(o *types.Order)
 }
 
 type OrderBookService interface {

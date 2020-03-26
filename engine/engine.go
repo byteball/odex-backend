@@ -19,6 +19,7 @@ type Engine struct {
 	tradeDao      interfaces.TradeDao
 	pairDao       interfaces.PairDao
 	obyteProvider interfaces.ObyteProvider
+	orderService  interfaces.OrderService
 }
 
 var logger = utils.EngineLogger
@@ -30,6 +31,7 @@ func NewEngine(
 	tradeDao interfaces.TradeDao,
 	pairDao interfaces.PairDao,
 	obyteProvider interfaces.ObyteProvider,
+	orderService interfaces.OrderService,
 ) *Engine {
 	pairs, err := pairDao.GetAll()
 
@@ -46,6 +48,7 @@ func NewEngine(
 			pair:          &p,
 			mutex:         &sync.Mutex{},
 			obyteProvider: obyteProvider,
+			orderService:  orderService,
 		}
 
 		obs[p.Code()] = ob
@@ -58,6 +61,7 @@ func NewEngine(
 		tradeDao,
 		pairDao,
 		obyteProvider,
+		orderService,
 	}
 
 	return engine
@@ -161,6 +165,7 @@ func (e *Engine) handleNewOrder(bytes []byte) error {
 			pair:          p,
 			mutex:         &sync.Mutex{},
 			obyteProvider: e.obyteProvider,
+			orderService:  e.orderService,
 		}
 
 		ob = e.orderbooks[code]
