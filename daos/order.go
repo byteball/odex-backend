@@ -554,7 +554,7 @@ func (dao *OrderDao) GetHistoryByUserAddress(addr string, limit ...int) ([]*type
 	return res, nil
 }
 
-func (dao *OrderDao) GetUserLockedBalance(account string, token string) (int64, error) {
+func (dao *OrderDao) GetUserLockedBalance(account string, token string) (int64, []*types.Order, error) {
 	var orders []*types.Order
 
 	q := bson.M{
@@ -577,7 +577,7 @@ func (dao *OrderDao) GetUserLockedBalance(account string, token string) (int64, 
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 0, &orders)
 	if err != nil {
 		logger.Error(err)
-		return 0, err
+		return 0, nil, err
 	}
 
 	totalLockedBalance := int64(0)
@@ -586,7 +586,7 @@ func (dao *OrderDao) GetUserLockedBalance(account string, token string) (int64, 
 		totalLockedBalance += lockedBalance
 	}
 
-	return totalLockedBalance, nil
+	return totalLockedBalance, orders, nil
 }
 
 func (dao *OrderDao) GetRawOrderBook(p *types.Pair) ([]*types.Order, error) {

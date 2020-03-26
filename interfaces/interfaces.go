@@ -31,7 +31,7 @@ type OrderDao interface {
 	UpdateOrderFilledAmount(h string, value int64) error
 	UpdateOrderFilledAmounts(h []string, values []int64) ([]*types.Order, error)
 	UpdateOrderStatusesByHashes(status string, hashes ...string) ([]*types.Order, error)
-	GetUserLockedBalance(account string, token string) (int64, error)
+	GetUserLockedBalance(account string, token string) (int64, []*types.Order, error)
 	UpdateOrderStatus(h string, status string) error
 	GetRawOrderBook(*types.Pair) ([]*types.Order, error)
 	GetOrderBook(*types.Pair) ([]map[string]interface{}, []map[string]interface{}, error)

@@ -256,7 +256,7 @@ func (s *OrderService) CheckIfBalancesAreSufficientAndCancel(address string, bal
 }
 
 func (s *OrderService) checkIfBalanceIsSufficientAndCancel(address string, token string, balance int64) {
-	lockedBalance, err := s.orderDao.GetUserLockedBalance(address, token)
+	lockedBalance, _, err := s.orderDao.GetUserLockedBalance(address, token)
 	if err != nil {
 		panic(err)
 	}
@@ -745,5 +745,6 @@ func (s *OrderService) FixOrderStatus(o *types.Order) {
 	s.mu.Unlock()
 	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
 		o.Status = "CANCELLED"
+		logger.Error("set status of order " + o.Hash + " to CANCELLED")
 	}
 }

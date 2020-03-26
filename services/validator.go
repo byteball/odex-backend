@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
@@ -70,7 +71,7 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 		return fmt.Errorf("Insufficient %v Balance: have %v, need %v for order %v at %v", o.SellTokenSymbol(), sellTokenBalance, totalRequiredAmount, o.Hash, o.Price)
 	}
 
-	sellTokenLockedBalance, err := s.orderDao.GetUserLockedBalance(o.UserAddress, o.SellToken())
+	sellTokenLockedBalance, orders, err := s.orderDao.GetUserLockedBalance(o.UserAddress, o.SellToken())
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -79,7 +80,11 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 	availableSellTokenBalance := sellTokenBalance - sellTokenLockedBalance
 
 	if availableSellTokenBalance < totalRequiredAmount {
-		return fmt.Errorf("Insufficient %v available: have %v, need %v for order %v at %v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount, o.Hash, o.Price)
+		var hashes []string
+		for _, o := range orders {
+			hashes = append(hashes, o.Hash)
+		}
+		return fmt.Errorf("Insufficient %v available: have %v, need %v for order %v at %v, open orders: %v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount, o.Hash, o.Price, strings.Join(hashes, ", "))
 	}
 
 	return nil

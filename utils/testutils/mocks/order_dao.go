@@ -441,7 +441,7 @@ func (_m *OrderDao) GetRawOrderBook(_a0 *types.Pair) ([]*types.Order, error) {
 }
 
 // GetUserLockedBalance provides a mock function with given fields: account, token
-func (_m *OrderDao) GetUserLockedBalance(account string, token string) (int64, error) {
+func (_m *OrderDao) GetUserLockedBalance(account string, token string) (int64, []*types.Order, error) {
 	ret := _m.Called(account, token)
 
 	var r0 int64
@@ -451,14 +451,23 @@ func (_m *OrderDao) GetUserLockedBalance(account string, token string) (int64, e
 		r0 = ret.Get(0).(int64)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+	var r1 []*types.Order
+	if rf, ok := ret.Get(1).(func(string, string) []*types.Order); ok {
 		r1 = rf(account, token)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*types.Order)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string) error); ok {
+		r2 = rf(account, token)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // Update provides a mock function with given fields: id, o

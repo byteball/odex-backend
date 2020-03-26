@@ -55,6 +55,11 @@ func (_m *OrderService) CheckIfBalancesAreSufficientAndCancel(address string, ba
 	_m.Called(address, balances)
 }
 
+// FixOrderStatus provides a mock function with given fields: o
+func (_m *OrderService) FixOrderStatus(o *types.Order) {
+	_m.Called(o)
+}
+
 // GetByHash provides a mock function with given fields: h
 func (_m *OrderService) GetByHash(h string) (*types.Order, error) {
 	ret := _m.Called(h)

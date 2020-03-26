@@ -301,7 +301,7 @@ func TestGetUserLockedBalance(t *testing.T) {
 	dao.Create(o3)
 	dao.Create(o4)
 
-	lockedBalance, err := dao.GetUserLockedBalance(user, quoteToken)
+	lockedBalance, _, err := dao.GetUserLockedBalance(user, quoteToken)
 	if err != nil {
 		t.Error("Could not get locked balance", err)
 	}
