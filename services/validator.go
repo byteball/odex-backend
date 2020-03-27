@@ -80,11 +80,11 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 	availableSellTokenBalance := sellTokenBalance - sellTokenLockedBalance
 
 	if availableSellTokenBalance < totalRequiredAmount {
-		var hashes []string
+		var orderLines []string
 		for _, o := range orders {
-			hashes = append(hashes, o.Hash)
+			orderLines = append(orderLines, fmt.Sprintf("%v for %v at %v", o.Hash, o.RemainingSellAmount, o.Price))
 		}
-		return fmt.Errorf("Insufficient %v available: have %v, need %v for order %v at %v, open orders: %v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount, o.Hash, o.Price, strings.Join(hashes, ", "))
+		return fmt.Errorf("Insufficient %v available: have %v, need %v for order %v at %v, total balance: %v, open orders:\n%v", o.SellTokenSymbol(), availableSellTokenBalance, totalRequiredAmount, o.Hash, o.Price, sellTokenBalance, strings.Join(orderLines, "\n"))
 	}
 
 	return nil
