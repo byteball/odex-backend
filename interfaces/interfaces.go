@@ -217,7 +217,7 @@ type AccountService interface {
 type ValidatorService interface {
 	ValidateOperatorAddress(o *types.Order) error
 	ValidateBalance(o *types.Order) error
-	ValidateAvailableBalance(o *types.Order) error
+	ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64) error
 	//VerifySignature(o *types.Order) (string, error)
 	//VerifyCancelSignature(oc *types.OrderCancel) (string, error)
 }

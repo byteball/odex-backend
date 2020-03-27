@@ -39,7 +39,7 @@ func (s *ValidatorService) ValidateOperatorAddress(o *types.Order) error {
 	return nil
 }
 
-func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
+func (s *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64) error {
 
 	pair, err := s.pairDao.GetByAsset(o.BaseToken, o.QuoteToken)
 	if err != nil {
@@ -65,6 +65,8 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order) error {
 		logger.Error(err)
 		return err
 	}
+
+	sellTokenBalance += uncommittedDeltas[o.SellToken()]
 
 	//Sell Token Balance
 	if sellTokenBalance < totalRequiredAmount {

@@ -149,7 +149,8 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 	}
 	//logger.Info("filled pair", o.Pair)
 
-	err = s.validator.ValidateAvailableBalance(o)
+	deltas := s.AdjustBalancesForUncommittedTrades(o.UserAddress, map[string]int64{})
+	err = s.validator.ValidateAvailableBalance(o, deltas)
 	if err != nil {
 		logger.Error(err)
 		return err
