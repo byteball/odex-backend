@@ -66,7 +66,7 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedD
 		return err
 	}
 
-	sellTokenBalance += uncommittedDeltas[o.SellToken()]
+	sellTokenBalance += uncommittedDeltas[o.SellTokenSymbol()]
 
 	//Sell Token Balance
 	if sellTokenBalance < totalRequiredAmount {

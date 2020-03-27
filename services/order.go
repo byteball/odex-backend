@@ -734,7 +734,7 @@ func (s *OrderService) AdjustBalancesForUncommittedTrades(address string, balanc
 			sellSymbol = quoteSymbol
 			buySymbol = baseSymbol
 		}
-		//logger.Info(sellSymbol, sellAmount)
+		logger.Info("adjusted balance of", address, "by -", sellAmount, sellSymbol, ", +", buyAmount, buySymbol)
 		balances[sellSymbol] -= sellAmount
 		balances[buySymbol] += buyAmount
 	}
