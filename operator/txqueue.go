@@ -102,6 +102,8 @@ func (txq *TxQueue) ExecuteTrade(m *types.Matches, tag uint64) error {
 		}
 
 		updatedTrades = append(updatedTrades, updated)*/
+		m.Trades[i].TxHash = arrTriggerUnits[i]
+		m.Trades[i].Status = "SUCCESS"
 		updatedTrades = append(updatedTrades, m.Trades[i])
 	}
 
