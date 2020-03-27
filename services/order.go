@@ -193,7 +193,7 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 	}
 
 	if o.Status == "FILLED" || o.Status == "ERROR" || o.Status == "CANCELLED" {
-		return fmt.Errorf("Cannot cancel order. Status is %v", o.Status)
+		return fmt.Errorf("Cannot cancel order %v. Status is %v", o.Hash, o.Status)
 	}
 
 	// update order status early to make sure new orders see the freed-up balance.
@@ -448,7 +448,9 @@ func (s *OrderService) handleEngineOrderMatched(res *types.EngineResponse) {
 			return
 		}
 
-		ws.SendOrderMessage("ORDER_MATCHED", taker, types.OrderMatchedPayload{Matches: &matches})
+		for _, o2 := range orders {
+			go ws.SendOrderMessage("ORDER_MATCHED", o2.UserAddress, types.OrderMatchedPayload{Matches: &matches})
+		}
 	}
 
 	// we only update the orderbook with the current set of orders if there are no invalid matches.

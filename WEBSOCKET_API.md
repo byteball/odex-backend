@@ -342,6 +342,7 @@ where
 * ORDER_ADDED (server --> client)
 * CANCEL_ORDER (client --> server)
 * ORDER_CANCELLED (server --> client) #CANCELLED with two L
+* ORDER_MATCHED (server --> client)
 * ORDER_PENDING (server --> client)
 * ORDER_SUCCESS (server --> client)
 * ORDER_ERROR (server --> client)
@@ -576,15 +577,15 @@ The payload is the same as in ORDER_ADDED.
 
 
 
-## ORDER PENDING MESSAGE (server --> client)
+## ORDER MATCHED MESSAGE (server --> client)
 
-The general format of notification about matched orders and submitted trades is the following:
+The general format of notification about matched orders is the following:
 
 ```
 {
   "channel": "orders",
   "event": {
-    "type": "ORDER_PENDING",
+    "type": "ORDER_MATCHED",
     "payload": {
       "takerOrder": <order>,
       "makerOrders": [ <order>, <order>, ...],
@@ -600,14 +601,37 @@ where
 * \<order> is an order that was initially sent by a user/client
 * \<trade> is a trade created as a result of matching
 
-This message can be used by the client to get updated information on each order such as the order status or simply
-to confirm that this order has indeed been sent to the transaction queue
+This message is sent when an order has been matched in the order book and sent to the transaction queue but not sent to Obyte chain for execution yet.
 
+
+
+## ORDER PENDING MESSAGE (server --> client)
+
+The order pending message indicates that the order was successfully sent to Obyte chain for execution. This typically happens immediately after ORDER_MATCHED. When ORDER_PENDING is received, the transaction has not triggered AA execution yet but this will invariably happen after some time (usually, a few minutes).
+
+The general format of the order success message is the following:
+
+```json
+{
+  "channel": "orders",
+  "event": {
+    "type": "ORDER_PENDING",
+    "payload": {
+      "takerOrder": <order>,
+      "makerOrders": [ <order>, <order>, ...],
+      "trades": [ <trade>, <trade>, ...],
+    }
+  }
+}
+
+```
+
+It is identical to the order matched message except that order statuses are different.
 
 
 ## ORDER SUCCESS MESSAGE (server --> client)
 
-The order success message indicates that the order was successfully sent to Obyte chain for execution.
+The order success message indicates that a previously delayed or replicated order was successfully sent to Obyte chain for execution. It should be treated the same as ORDER_PENDING.
 
 The general format of the order success message is the following:
 
@@ -627,7 +651,6 @@ The general format of the order success message is the following:
 ```
 
 It is identical to the order pending message except that order statuses are different.
-This means that the trade transaction was successful.
 
 
 
