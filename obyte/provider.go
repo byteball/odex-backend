@@ -37,7 +37,13 @@ func NewObyteProvider() *ObyteProvider {
 
 func (o *ObyteProvider) BalanceOf(owner string, token string) (int64, error) {
 	var balance int64
-	err := o.Client.CallFor(&balance, "getBalance", owner, token)
+	err := utils.Retry(3, func() error {
+		err := o.Client.CallFor(&balance, "getBalance", owner, token)
+		if err != nil {
+			log.Println("error from getBalance: ", err)
+		}
+		return err
+	})
 	if err != nil {
 		panic(err)
 	}
