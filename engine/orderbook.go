@@ -226,9 +226,11 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 	if takerOrder.Side == "BUY" {
 		// sell the remaining taker's quote amount at maker's price
 		// takerOutput in base currency
-		takerOutput := round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
-		if makerOrder.RemainingSellAmount > takerOutput {
-			tradeAmount = takerOutput
+		//takerOutput := round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
+		makerQuoteOutput := round(float64(makerOrder.RemainingSellAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
+		//if makerOrder.RemainingSellAmount > takerOutput {
+		if makerQuoteOutput > takerOrder.RemainingSellAmount {
+			tradeAmount = round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
 			tradeQuoteAmount = takerOrder.RemainingSellAmount
 
 			makerOrder.FilledAmount += tradeAmount
