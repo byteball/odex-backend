@@ -321,6 +321,14 @@ func (s *OrderService) handleOrderCancelled(res *types.EngineResponse) {
 // responses and database updates accordingly
 func (s *OrderService) HandleEngineResponse(res *types.EngineResponse) error {
 	s.mu.Lock()
+	memoryOrder := s.ordersInThePipeline[res.Order.Hash]
+	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
+		logger.Info("EngineResponse: status of memory order " + res.Order.Hash + " is CANCELLED")
+		if res.Order.Status != "CANCELLED" {
+			res.Order.Status = "CANCELLED"
+			logger.Info("EngineResponse: fixed status of order " + res.Order.Hash + " to CANCELLED")
+		}
+	}
 	delete(s.ordersInThePipeline, res.Order.Hash)
 	s.mu.Unlock()
 	switch res.Status {
@@ -748,6 +756,6 @@ func (s *OrderService) FixOrderStatus(o *types.Order) {
 	s.mu.Unlock()
 	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
 		o.Status = "CANCELLED"
-		logger.Error("set status of order " + o.Hash + " to CANCELLED")
+		logger.Info("set status of order " + o.Hash + " to CANCELLED")
 	}
 }
