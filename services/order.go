@@ -169,6 +169,14 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 // Only Orders which are OPEN or NEW i.e. Not yet filled/partially filled
 // can be cancelled
 func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
+	s.mu.Lock()
+	memoryOrder := s.ordersInThePipeline[oc.OrderHash]
+	if memoryOrder != nil {
+		memoryOrder.Status = "CANCELLED"
+		logger.Info("in-memory order status set to CANCELLED")
+	}
+	s.mu.Unlock()
+
 	o, err := s.orderDao.GetByHash(oc.OrderHash)
 	if err != nil {
 		logger.Error(err)
@@ -183,12 +191,10 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 
 	foundInDb := o != nil
 	if o == nil {
-		s.mu.Lock()
-		o = s.ordersInThePipeline[oc.OrderHash]
-		s.mu.Unlock()
-		if o == nil {
+		if memoryOrder == nil {
 			return errors.New("No order with corresponding hash: " + oc.OrderHash)
 		} else {
+			o = memoryOrder
 			logger.Info("to-be-cancelled order " + oc.OrderHash + " found in memory")
 		}
 	}
@@ -205,11 +211,6 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 			logger.Error(err)
 			return err
 		}
-	}
-
-	if !foundInDb {
-		o.Status = "CANCELLED"
-		logger.Info("in-memeory order status set to CANCELLED")
 	}
 
 	err = s.broker.PublishCancelOrderMessage(o)
