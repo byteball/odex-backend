@@ -199,7 +199,7 @@ func (s *OrderService) CancelOrder(oc *types.OrderCancel) error {
 		}
 	}
 
-	if o.Status == "FILLED" || o.Status == "ERROR" || o.Status == "CANCELLED" {
+	if o.Status == "FILLED" || o.Status == "ERROR" || foundInDb && o.Status == "CANCELLED" {
 		return fmt.Errorf("Cannot cancel order %v. Status is %v", o.Hash, o.Status)
 	}
 
