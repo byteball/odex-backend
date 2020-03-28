@@ -116,7 +116,13 @@ func (o *ObyteProvider) Decimals(token string) (uint8, error) {
 func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 	log.Println("will rpc addOrder", utils.JSON(signedOrder))
 	var hash string // order hash
-	err := o.Client.CallFor(&hash, "addOrder", signedOrder)
+	err := utils.Retry(3, func() error {
+		err := o.Client.CallFor(&hash, "addOrder", signedOrder)
+		if err != nil {
+			log.Println("error from addOrder: ", err)
+		}
+		return err
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -127,7 +133,13 @@ func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 func (o *ObyteProvider) CancelOrder(signedCancel *interface{}) error {
 	log.Println("will rpc cancelOrder", utils.JSON(signedCancel))
 	var resp string
-	err := o.Client.CallFor(&resp, "cancelOrder", signedCancel)
+	err := utils.Retry(3, func() error {
+		err := o.Client.CallFor(&resp, "cancelOrder", signedCancel)
+		if err != nil {
+			log.Println("error from cancelOrder: ", err)
+		}
+		return err
+	})
 
 	return err
 }
