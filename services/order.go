@@ -228,15 +228,17 @@ func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string
 		logger.Error(err)
 		return "", err
 	}*/
-	o, err := s.orderDao.GetByHash(oc.OrderHash)
+	s.mu.Lock()
+	o := s.ordersInThePipeline[oc.OrderHash]
+	s.mu.Unlock()
+
+	var err error
+	if o == nil {
+		o, err = s.orderDao.GetByHash(oc.OrderHash)
+	}
 
 	if err == nil && o == nil {
-		s.mu.Lock()
-		o = s.ordersInThePipeline[oc.OrderHash]
-		s.mu.Unlock()
-		if o == nil {
-			err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
-		}
+		err = errors.New("failed to find the order to be cancelled: " + oc.OrderHash)
 	}
 
 	if err != nil {
