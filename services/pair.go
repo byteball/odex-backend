@@ -61,7 +61,7 @@ func (s *PairService) CreatePairs(asset string) ([]*types.Pair, error) {
 			Asset:    asset,
 			Decimals: int(decimals),
 			Active:   true,
-			Listed:   false,
+			Listed:   true,
 			Quote:    false,
 		}
 
@@ -89,7 +89,7 @@ func (s *PairService) CreatePairs(asset string) ([]*types.Pair, error) {
 				BaseAsset:          base.Asset,
 				BaseTokenDecimals:  base.Decimals,
 				Active:             true,
-				Listed:             false,
+				Listed:             true,
 			}
 
 			err := s.pairDao.Create(&p)

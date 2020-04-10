@@ -18,8 +18,9 @@ import (
 func SetupPairEndpointTest() (*mux.Router, *mocks.PairService) {
 	r := mux.NewRouter()
 	pairService := new(mocks.PairService)
+	tokenService := new(mocks.TokenService)
 
-	ServePairResource(r, pairService)
+	ServePairResource(r, pairService, tokenService)
 
 	return r, pairService
 }

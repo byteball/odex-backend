@@ -112,6 +112,29 @@ func (_m *TokenDao) GetByAsset(asset string) (*types.Token, error) {
 	return r0, r1
 }
 
+// GetByAssetOrSymbol provides a mock function with given fields: assetOrSymbol
+func (_m *TokenDao) GetByAssetOrSymbol(assetOrSymbol string) (*types.Token, error) {
+	ret := _m.Called(assetOrSymbol)
+
+	var r0 *types.Token
+	if rf, ok := ret.Get(0).(func(string) *types.Token); ok {
+		r0 = rf(assetOrSymbol)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(assetOrSymbol)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetByID provides a mock function with given fields: id
 func (_m *TokenDao) GetByID(id bson.ObjectId) (*types.Token, error) {
 	ret := _m.Called(id)
@@ -128,6 +151,29 @@ func (_m *TokenDao) GetByID(id bson.ObjectId) (*types.Token, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
 		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBySymbol provides a mock function with given fields: symbol
+func (_m *TokenDao) GetBySymbol(symbol string) (*types.Token, error) {
+	ret := _m.Called(symbol)
+
+	var r0 *types.Token
+	if rf, ok := ret.Get(0).(func(string) *types.Token); ok {
+		r0 = rf(symbol)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(symbol)
 	} else {
 		r1 = ret.Error(1)
 	}

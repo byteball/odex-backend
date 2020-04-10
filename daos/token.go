@@ -186,6 +186,32 @@ func (dao *TokenDao) GetByAsset(asset string) (*types.Token, error) {
 	return &resp[0], nil
 }
 
+// GetBySymbol function fetches details of a token based on its asset ID
+func (dao *TokenDao) GetBySymbol(symbol string) (*types.Token, error) {
+	q := bson.M{"symbol": symbol}
+	var resp []types.Token
+
+	err := db.Get(dao.dbName, dao.collectionName, q, 0, 1, &resp)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	if len(resp) == 0 {
+		return nil, nil
+	}
+
+	return &resp[0], nil
+}
+
+func (dao *TokenDao) GetByAssetOrSymbol(assetOrsymbol string) (*types.Token, error) {
+	t, err := dao.GetByAsset(assetOrsymbol)
+	if t != nil || err != nil {
+		return t, err
+	}
+	return dao.GetBySymbol(assetOrsymbol)
+}
+
 // Drop drops all the order documents in the current database
 func (dao *TokenDao) Drop() error {
 	err := db.DropCollection(dao.dbName, dao.collectionName)

@@ -33,6 +33,27 @@ func (_m *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 	return r0, r1
 }
 
+// Asset provides a mock function with given fields: symbol
+func (_m *ObyteProvider) Asset(symbol string) (string, error) {
+	ret := _m.Called(symbol)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(symbol)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(symbol)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // BalanceOf provides a mock function with given fields: owner, token
 func (_m *ObyteProvider) BalanceOf(owner string, token string) (int64, error) {
 	ret := _m.Called(owner, token)
