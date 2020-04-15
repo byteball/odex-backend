@@ -61,7 +61,7 @@ func (c *Client) closeConnection() {
 	defer subscriptionMutex.Unlock()
 
 	for _, unsub := range unsubscribeHandlers[c] {
-		go unsub(c)
+		unsub(c)
 	}
 
 	c.Close()
