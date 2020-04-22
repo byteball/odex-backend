@@ -133,9 +133,9 @@ func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 		}
 		return err
 	})
-	if err != nil {
+	/*if err != nil {
 		panic(err)
-	}
+	}*/
 
 	return hash, err
 }
