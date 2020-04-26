@@ -346,6 +346,8 @@ func (ob *OrderBook) cancelOrder(o *types.Order) error {
 
 	if o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
 		o.Status = "CANCELLED"
+	}
+	if o.Status == "AUTO_CANCELLED" || o.Status == "CANCELLED" {
 		err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
 		if err != nil {
 			logger.Error(err, "when cancelling order", o.Hash)
