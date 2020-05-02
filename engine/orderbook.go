@@ -336,7 +336,7 @@ func toOscriptPrecision(x float64) float64 {
 }
 
 func round(x float64) int64 {
-	return int64(math.Round(toOscriptPrecision(x)))
+	return int64(math.RoundToEven(toOscriptPrecision(x)))
 }
 
 // CancelOrder is used to cancel the order from orderbook
