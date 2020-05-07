@@ -12,6 +12,7 @@ type Client struct {
 	mu       sync.Mutex
 	RpcMutex sync.Mutex
 	send     chan types.WebsocketMessage
+	closed   bool
 }
 
 // TODO: refactor into non-global variables
@@ -21,7 +22,7 @@ var subscriptionMutex sync.Mutex
 func NewClient(c *websocket.Conn) *Client {
 	subscriptionMutex.Lock()
 	defer subscriptionMutex.Unlock()
-	conn := &Client{Conn: c, mu: sync.Mutex{}, RpcMutex: sync.Mutex{}, send: make(chan types.WebsocketMessage)}
+	conn := &Client{Conn: c, mu: sync.Mutex{}, RpcMutex: sync.Mutex{}, send: make(chan types.WebsocketMessage), closed: false}
 
 	if unsubscribeHandlers == nil {
 		unsubscribeHandlers = make(map[*Client][]func(*Client))
@@ -53,6 +54,10 @@ func (c *Client) SendMessage(channel string, msgType string, payload interface{}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		logger.Info("trying to SendMessage to a closed ws connection")
+		return
+	}
 	c.send <- m
 }
 
@@ -62,6 +67,11 @@ func (c *Client) closeConnection() {
 
 	for _, unsub := range unsubscribeHandlers[c] {
 		unsub(c)
+	}
+
+	if !c.closed {
+		c.closed = true
+		close(c.send)
 	}
 
 	c.Close()
@@ -85,5 +95,9 @@ func (c *Client) SendOrderErrorMessage(err error, h string) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		logger.Info("trying to SendOrderErrorMessage to a closed ws connection")
+		return
+	}
 	c.send <- m
 }

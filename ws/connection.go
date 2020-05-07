@@ -121,6 +121,7 @@ func writeHandler(c *Client) {
 			c.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.WriteMessage(websocket.CloseMessage, []byte{})
+				return
 			}
 
 			logger.LogMessageOut(&m)
