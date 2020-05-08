@@ -71,7 +71,9 @@ func (c *Client) closeConnection() {
 
 	if !c.closed {
 		c.closed = true
+		c.mu.Lock()
 		close(c.send)
+		c.mu.Unlock()
 	}
 
 	c.Close()
