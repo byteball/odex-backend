@@ -12,13 +12,13 @@ type ValidatorService struct {
 	mock.Mock
 }
 
-// ValidateAvailableBalance provides a mock function with given fields: o, uncommittedDeltas
-func (_m *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64) error {
-	ret := _m.Called(o, uncommittedDeltas)
+// ValidateAvailableBalance provides a mock function with given fields: o, uncommittedDeltas, balanceLockedInMemoryOrders
+func (_m *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64, balanceLockedInMemoryOrders int64) error {
+	ret := _m.Called(o, uncommittedDeltas, balanceLockedInMemoryOrders)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*types.Order, map[string]int64) error); ok {
-		r0 = rf(o, uncommittedDeltas)
+	if rf, ok := ret.Get(0).(func(*types.Order, map[string]int64, int64) error); ok {
+		r0 = rf(o, uncommittedDeltas, balanceLockedInMemoryOrders)
 	} else {
 		r0 = ret.Error(0)
 	}
