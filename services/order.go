@@ -150,11 +150,13 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 	//logger.Info("filled pair", o.Pair)
 
 	balanceLockedInMemoryOrders := int64(0)
+	s.mu.Lock()
 	for _, po := range s.ordersInThePipeline {
-		if po.UserAddress == o.UserAddress && po.SellToken() == o.SellToken() && po.Status == "OPEN" {
+		if po.UserAddress == o.UserAddress && po.Hash != o.Hash && po.SellToken() == o.SellToken() && po.Status == "OPEN" {
 			balanceLockedInMemoryOrders += po.RemainingSellAmount
 		}
 	}
+	s.mu.Unlock()
 
 	deltas := s.AdjustBalancesForUncommittedTrades(o.UserAddress, map[string]int64{})
 	err = s.validator.ValidateAvailableBalance(o, deltas, balanceLockedInMemoryOrders)
