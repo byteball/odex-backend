@@ -147,7 +147,7 @@ func NewRouter(
 	endpoints.ServeInfoResource(r, tokenService, infoService, provider)
 	endpoints.ServeAccountResource(r, accountService, orderService, provider)
 	endpoints.ServeTokenResource(r, tokenService)
-	endpoints.ServePairResource(r, pairService)
+	endpoints.ServePairResource(r, pairService, tokenService)
 	endpoints.ServeOrderBookResource(r, orderBookService)
 	endpoints.ServeOHLCVResource(r, ohlcvService)
 	endpoints.ServeTradeResource(r, tradeService)

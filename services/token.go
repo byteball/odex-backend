@@ -1,6 +1,9 @@
 package services
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/globalsign/mgo/bson"
 
@@ -50,25 +53,49 @@ func (s *TokenService) GetByAsset(asset string) (*types.Token, error) {
 	return s.tokenDao.GetByAsset(asset)
 }
 
-func (s *TokenService) CheckByAsset(asset string) (*types.Token, error) {
-	t, err := s.tokenDao.GetByAsset(asset)
+// GetBySymbol fetches the detailed document of a token using its symbol
+func (s *TokenService) GetBySymbol(symbol string) (*types.Token, error) {
+	return s.tokenDao.GetBySymbol(symbol)
+}
+
+// GetByAssetOrSymbol fetches the detailed document of a token using its asset ID or symbol
+func (s *TokenService) GetByAssetOrSymbol(assetOrSymbol string) (*types.Token, error) {
+	return s.tokenDao.GetByAssetOrSymbol(assetOrSymbol)
+}
+
+func (s *TokenService) CheckByAssetOrSymbol(assetOrSymbol string) (*types.Token, error) {
+	t, err := s.tokenDao.GetByAssetOrSymbol(assetOrSymbol)
 	if err != nil {
 		return nil, err
 	}
 	if t != nil {
 		return t, nil
 	}
-	symbol, err := s.provider.Symbol(asset)
-	if err != nil {
-		return nil, err
+
+	var asset, symbol string
+	if strings.ToUpper(assetOrSymbol) == assetOrSymbol {
+		symbol = assetOrSymbol
+		asset, err = s.provider.Asset(symbol)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(assetOrSymbol) == 44 || assetOrSymbol == "base" {
+		asset = assetOrSymbol
+		symbol, err = s.provider.Symbol(asset)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("invalid asset or symbol")
 	}
+
 	decimals, err := s.provider.Decimals(asset)
 	if err != nil {
 		return nil, err
 	}
 	t = &types.Token{
 		Symbol:   symbol,
-		Asset:  asset,
+		Asset:    asset,
 		Decimals: int(decimals),
 		Active:   true,
 		Listed:   false,

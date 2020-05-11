@@ -336,7 +336,7 @@ func toOscriptPrecision(x float64) float64 {
 }
 
 func round(x float64) int64 {
-	return int64(math.Round(toOscriptPrecision(x)))
+	return int64(math.RoundToEven(toOscriptPrecision(x)))
 }
 
 // CancelOrder is used to cancel the order from orderbook
@@ -346,6 +346,8 @@ func (ob *OrderBook) cancelOrder(o *types.Order) error {
 
 	if o.Status != "AUTO_CANCELLED" && o.Status != "FILLED" {
 		o.Status = "CANCELLED"
+	}
+	if o.Status == "AUTO_CANCELLED" || o.Status == "CANCELLED" {
 		err := ob.orderDao.UpdateOrderStatus(o.Hash, o.Status)
 		if err != nil {
 			logger.Error(err, "when cancelling order", o.Hash)

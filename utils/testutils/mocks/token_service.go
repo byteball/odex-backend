@@ -15,8 +15,8 @@ type TokenService struct {
 	mock.Mock
 }
 
-// CheckByAsset provides a mock function with given fields: a
-func (_m *TokenService) CheckByAsset(a string) (*types.Token, error) {
+// CheckByAssetOrSymbol provides a mock function with given fields: a
+func (_m *TokenService) CheckByAssetOrSymbol(a string) (*types.Token, error) {
 	ret := _m.Called(a)
 
 	var r0 *types.Token
@@ -121,6 +121,29 @@ func (_m *TokenService) GetByAsset(a string) (*types.Token, error) {
 	return r0, r1
 }
 
+// GetByAssetOrSymbol provides a mock function with given fields: a
+func (_m *TokenService) GetByAssetOrSymbol(a string) (*types.Token, error) {
+	ret := _m.Called(a)
+
+	var r0 *types.Token
+	if rf, ok := ret.Get(0).(func(string) *types.Token); ok {
+		r0 = rf(a)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(a)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetByID provides a mock function with given fields: id
 func (_m *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
 	ret := _m.Called(id)
@@ -137,6 +160,29 @@ func (_m *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
 		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBySymbol provides a mock function with given fields: s
+func (_m *TokenService) GetBySymbol(s string) (*types.Token, error) {
+	ret := _m.Called(s)
+
+	var r0 *types.Token
+	if rf, ok := ret.Get(0).(func(string) *types.Token); ok {
+		r0 = rf(s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(s)
 	} else {
 		r1 = ret.Error(1)
 	}

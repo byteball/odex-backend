@@ -103,6 +103,16 @@ func (o *ObyteProvider) Symbol(token string) (string, error) {
 	return symbol, err
 }
 
+func (o *ObyteProvider) Asset(symbol string) (string, error) {
+	var asset string
+	err := o.Client.CallFor(&asset, "getAsset", symbol)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return asset, err
+}
+
 func (o *ObyteProvider) Decimals(token string) (uint8, error) {
 	var decimals uint8
 	err := o.Client.CallFor(&decimals, "getDecimals", token)
@@ -123,9 +133,9 @@ func (o *ObyteProvider) AddOrder(signedOrder *interface{}) (string, error) {
 		}
 		return err
 	})
-	if err != nil {
+	/*if err != nil {
 		panic(err)
-	}
+	}*/
 
 	return hash, err
 }

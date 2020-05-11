@@ -39,7 +39,7 @@ func (s *ValidatorService) ValidateOperatorAddress(o *types.Order) error {
 	return nil
 }
 
-func (s *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64) error {
+func (s *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedDeltas map[string]int64, balanceLockedInMemoryOrders int64) error {
 
 	pair, err := s.pairDao.GetByAsset(o.BaseToken, o.QuoteToken)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *ValidatorService) ValidateAvailableBalance(o *types.Order, uncommittedD
 		return err
 	}
 
-	availableSellTokenBalance := sellTokenBalance - sellTokenLockedBalance
+	availableSellTokenBalance := sellTokenBalance - sellTokenLockedBalance - balanceLockedInMemoryOrders
 
 	if availableSellTokenBalance < totalRequiredAmount {
 		var orderLines []string

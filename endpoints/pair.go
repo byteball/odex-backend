@@ -12,15 +12,17 @@ import (
 )
 
 type pairEndpoint struct {
-	pairService interfaces.PairService
+	pairService  interfaces.PairService
+	tokenService interfaces.TokenService
 }
 
 // ServePairResource sets up the routing of pair endpoints and the corresponding handlers.
 func ServePairResource(
 	r *mux.Router,
 	p interfaces.PairService,
+	t interfaces.TokenService,
 ) {
-	e := &pairEndpoint{p}
+	e := &pairEndpoint{p, t}
 	r.HandleFunc("/pairs/create", e.HandleCreatePairs).Methods("POST")
 	r.HandleFunc("/pair/create", e.HandleCreatePair).Methods("POST")
 	r.HandleFunc("/pairs", e.HandleGetPairs).Methods("GET")
@@ -37,6 +39,21 @@ func (e *pairEndpoint) HandleCreatePairs(w http.ResponseWriter, r *http.Request)
 		logger.Info(err)
 		httputils.WriteError(w, http.StatusBadRequest, "Invalid Payload")
 		return
+	}
+
+	if token.Asset == "" && token.Symbol != "" {
+		t, err := e.tokenService.GetBySymbol(token.Symbol)
+		if err != nil {
+			logger.Info(err)
+			httputils.WriteError(w, http.StatusBadRequest, "Bad symbol")
+			return
+		}
+		if t == nil {
+			logger.Info(err)
+			httputils.WriteError(w, http.StatusBadRequest, "symbol not found")
+			return
+		}
+		token = *t
 	}
 
 	defer r.Body.Close()

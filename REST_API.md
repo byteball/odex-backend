@@ -63,11 +63,11 @@ Retrieve all base tokens currently registered on the exchange
 
 Retrieve all quote tokens currently registered on the exchange
 
-### GET /tokens/{asset}
+### GET /tokens/{assetOrSymbol}
 
-Retrieve token information for a token asset ID
+Retrieve token information for a token asset ID or symbol
 
-* {asset} is an asset ID ("base" or 44-bytes long string)
+* {assetOrSymbol} is an asset ID ("base" or 44-bytes long string) or symbol
 
 
 # Orderbook resource
