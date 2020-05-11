@@ -207,7 +207,7 @@ func (op *Operator) HandleEvents() error {
 				err = op.OrderService.CancelOrder(oc)
 				if err != nil {
 					logger.Error(err)
-					go ws.SendOrderMessage("ERROR", oc.UserAddress, err.Error())
+					go ws.SendOrderMessage("ERROR", ownerAddress, err.Error())
 					break
 				}
 
