@@ -813,6 +813,10 @@ func (dao *OrderDao) GetMatchingBuyOrders(o *types.Order) ([]*types.Order, error
 		"matcherAddress": o.MatcherAddress,
 		"side":           "BUY",
 		"price":          bson.M{"$gte": o.Price},
+		"$or": []bson.M{
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$exists": false}},
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix() + 60}},
+		},
 	}
 	/*q := []bson.M{
 		bson.M{
@@ -851,6 +855,10 @@ func (dao *OrderDao) GetMatchingSellOrders(o *types.Order) ([]*types.Order, erro
 		"matcherAddress": o.MatcherAddress,
 		"side":           "SELL",
 		"price":          bson.M{"$lte": o.Price},
+		"$or": []bson.M{
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$exists": false}},
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix() + 60}},
+		},
 	}
 	/*q := []bson.M{
 		bson.M{
