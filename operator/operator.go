@@ -199,9 +199,17 @@ func (op *Operator) HandleEvents() error {
 				}
 
 				if ownerAddress != oc.UserAddress && signerAddress != oc.UserAddress {
-					logger.Error(err)
-					go ws.SendOrderMessage("ERROR", oc.UserAddress, "Not your order")
-					break
+					authorizedAddresses, err := op.ObyteProvider.GetAuthorizedAddresses(ownerAddress)
+					if err != nil {
+						logger.Error(err)
+						go ws.SendOrderMessage("ERROR", oc.UserAddress, err.Error())
+						break
+					}
+					if !utils.Contains(authorizedAddresses, oc.UserAddress) {
+						logger.Error("Not your order")
+						go ws.SendOrderMessage("ERROR", oc.UserAddress, "Not your order")
+						break
+					}
 				}
 
 				err = op.OrderService.CancelOrder(oc)
