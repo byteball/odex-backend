@@ -230,7 +230,7 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 		makerQuoteOutput := round(float64(makerOrder.RemainingSellAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
 		//if makerOrder.RemainingSellAmount > takerOutput {
 		if makerQuoteOutput > takerOrder.RemainingSellAmount {
-			tradeAmount = round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
+			tradeAmount = round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.OriginalPrice()))
 			tradeQuoteAmount = takerOrder.RemainingSellAmount
 
 			makerOrder.FilledAmount += tradeAmount
@@ -243,7 +243,7 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 			takerOrder.Status = "FILLED"
 		} else { // maker <= taker
 			tradeAmount = makerOrder.RemainingAmount()
-			tradeQuoteAmount = round(float64(tradeAmount) * toOscriptPrecision(makerOrder.Price))
+			tradeQuoteAmount = round(float64(tradeAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
 
 			makerOrder.FilledAmount += tradeAmount
 			makerOrder.RemainingSellAmount -= tradeAmount
