@@ -7,6 +7,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cast"
 
@@ -46,7 +47,7 @@ func NewOrderService(
 	orderChannels := make(map[string]chan *types.WebsocketEvent)
 	ordersInThePipeline := make(map[string]*types.Order)
 
-	return &OrderService{
+	s := &OrderService{
 		orderDao,
 		pairDao,
 		accountDao,
@@ -57,6 +58,13 @@ func NewOrderService(
 		ordersInThePipeline,
 		sync.Mutex{},
 	}
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range ticker.C {
+			s.CancelExpiredOrders()
+		}
+	}()
+	return s
 }
 
 // GetByID fetches the details of an order using order's mongo ID
@@ -313,6 +321,21 @@ func (s *OrderService) CancelOrdersSignedByRevokedSigner(address string, signer 
 		panic(err)
 	}
 	logger.Info("will cancel", len(orders), "orders due to revocation of authorization on", address, "from signer", signer)
+	for _, order := range orders {
+		order.Status = "AUTO_CANCELLED"
+		err = s.broker.PublishCancelOrderMessage(order)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func (s *OrderService) CancelExpiredOrders() {
+	orders, err := s.orderDao.GetExpiredOrders()
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("will cancel", len(orders), "expired orders")
 	for _, order := range orders {
 		order.Status = "AUTO_CANCELLED"
 		err = s.broker.PublishCancelOrderMessage(order)

@@ -886,6 +886,23 @@ func (dao *OrderDao) GetMatchingSellOrders(o *types.Order) ([]*types.Order, erro
 	return orders, nil
 }
 
+func (dao *OrderDao) GetExpiredOrders() ([]*types.Order, error) {
+	var orders []*types.Order
+
+	q := bson.M{
+		"status":                                 bson.M{"$in": []string{"OPEN", "PARTIAL_FILLED"}},
+		"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix()},
+	}
+
+	err := db.Get(dao.dbName, dao.collectionName, q, 0, 0, &orders)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	return orders, nil
+}
+
 // Drop drops all the order documents in the current database
 func (dao *OrderDao) Drop() error {
 	err := db.DropCollection(dao.dbName, dao.collectionName)

@@ -281,6 +281,29 @@ func (_m *OrderDao) GetCurrentByUserAddressAndSignerAddress(address string, sign
 	return r0, r1
 }
 
+// GetExpiredOrders provides a mock function with given fields:
+func (_m *OrderDao) GetExpiredOrders() ([]*types.Order, error) {
+	ret := _m.Called()
+
+	var r0 []*types.Order
+	if rf, ok := ret.Get(0).(func() []*types.Order); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*types.Order)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetHistoryByUserAddress provides a mock function with given fields: a, limit
 func (_m *OrderDao) GetHistoryByUserAddress(a string, limit ...int) ([]*types.Order, error) {
 	_va := make([]interface{}, len(limit))

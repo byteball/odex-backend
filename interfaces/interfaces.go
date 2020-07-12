@@ -28,6 +28,7 @@ type OrderDao interface {
 	GetHistoryByUserAddress(a string, limit ...int) ([]*types.Order, error)
 	GetMatchingBuyOrders(o *types.Order) ([]*types.Order, error)
 	GetMatchingSellOrders(o *types.Order) ([]*types.Order, error)
+	GetExpiredOrders() ([]*types.Order, error)
 	UpdateOrderFilledAmount(h string, value int64) error
 	UpdateOrderFilledAmounts(h []string, values []int64) ([]*types.Order, error)
 	UpdateOrderStatusesByHashes(status string, hashes ...string) ([]*types.Order, error)
@@ -143,6 +144,7 @@ type OrderService interface {
 	GetSenderAddresses(oc *types.OrderCancel) (string, string, error)
 	CheckIfBalancesAreSufficientAndCancel(address string, balances map[string]int64)
 	CancelOrdersSignedByRevokedSigner(address string, signer string)
+	CancelExpiredOrders()
 	AdjustBalancesForUncommittedTrades(address string, balances map[string]int64) map[string]int64
 	FixOrderStatus(o *types.Order)
 }
