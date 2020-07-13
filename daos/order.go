@@ -891,7 +891,7 @@ func (dao *OrderDao) GetExpiredOrders() ([]*types.Order, error) {
 
 	q := bson.M{
 		"status":                                 bson.M{"$in": []string{"OPEN", "PARTIAL_FILLED"}},
-		"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix()},
+		"originalOrder.signed_message.expiry_ts": bson.M{"$lte": time.Now().Unix()},
 	}
 
 	err := db.Get(dao.dbName, dao.collectionName, q, 0, 0, &orders)
