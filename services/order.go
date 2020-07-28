@@ -105,8 +105,15 @@ func (s *OrderService) GetHistoryByUserAddress(addr string, limit ...int) ([]*ty
 // on rabbitmq queue for matching engine to process the order
 func (s *OrderService) NewOrder(o *types.Order) (e error) {
 	s.mu.Lock()
-	s.ordersInThePipeline[o.Hash] = o
+	existingOrder := s.ordersInThePipeline[o.Hash]
+	if existingOrder == nil {
+		s.ordersInThePipeline[o.Hash] = o
+	}
 	s.mu.Unlock()
+	if existingOrder != nil {
+		logger.Info("duplicate order found in memory", o.Hash)
+		return nil // not an error
+	}
 	defer func() {
 		if e != nil {
 			s.mu.Lock()
@@ -114,6 +121,16 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 			s.mu.Unlock()
 		}
 	}()
+
+	existingOrder, daoErr := s.orderDao.GetByHash(o.Hash)
+	if daoErr != nil {
+		logger.Error(daoErr)
+		return daoErr
+	}
+	if existingOrder != nil {
+		logger.Info("duplicate order found in db", o.Hash)
+		return nil // not an error
+	}
 
 	if err := o.Validate(); err != nil {
 		logger.Error(err)
