@@ -139,7 +139,7 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 	}
 
-	//TODO refactor
+	// the order can be partial filled and then immediately cancelled
 	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
@@ -199,7 +199,7 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 	}
 
-	//TODO refactor
+	// the order can be partial filled and then immediately cancelled
 	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
