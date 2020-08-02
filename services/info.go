@@ -97,9 +97,10 @@ func (s *InfoService) GetExchangeStats() (*types.ExchangeStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -308,9 +309,10 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -401,6 +403,7 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 		pairData := &types.PairData{
 			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
 			Volume:             0,
+			QuoteVolume:        0,
 			Close:              0,
 			Count:              0,
 			OrderVolume:        0,
@@ -415,6 +418,7 @@ func (s *InfoService) GetExchangeData() (*types.ExchangeData, error) {
 		for _, t := range tradeData {
 			if t.AssetCode() == p.AssetCode() {
 				pairData.Volume = t.Volume
+				pairData.QuoteVolume = t.QuoteVolume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
 				pairData.AverageTradeAmount = t.Volume / t.Count
@@ -544,9 +548,10 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -625,6 +630,7 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 		pairData := &types.PairData{
 			Pair:               types.PairID{PairName: p.Name(), BaseToken: p.BaseAsset, QuoteToken: p.QuoteAsset},
 			Volume:             0,
+			QuoteVolume:        0,
 			Close:              0,
 			Count:              0,
 			OrderVolume:        0,
@@ -639,6 +645,7 @@ func (s *InfoService) GetPairStats() (*types.PairStats, error) {
 		for _, t := range tradeData {
 			if t.AssetCode() == p.AssetCode() {
 				pairData.Volume = t.Volume
+				pairData.QuoteVolume = t.QuoteVolume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
 				pairData.AverageTradeAmount = (t.Volume / t.Count)

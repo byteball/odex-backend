@@ -235,6 +235,7 @@ type PairData struct {
 	Low                float64 `json:"low,omitempty" bson:"low"`
 	Open               float64 `json:"open,omitempty" bson:"open"`
 	Volume             int64   `json:"volume,omitempty" bson:"volume"`
+	QuoteVolume        int64   `json:"quoteVolume,omitempty" bson:"quoteVolume"`
 	Timestamp          int64   `json:"timestamp,omitempty" bson:"timestamp"`
 	OrderVolume        int64   `json:"orderVolume,omitempty" bson:"orderVolume"`
 	OrderCount         int64   `json:"orderCount,omitempty" bson:"orderCount"`
@@ -271,6 +272,10 @@ func (p *PairData) MarshalJSON() ([]byte, error) {
 
 	if p.Volume != 0 {
 		pairData["volume"] = p.Volume
+	}
+
+	if p.QuoteVolume != 0 {
+		pairData["quoteVolume"] = p.QuoteVolume
 	}
 
 	if p.Close != 0 {
@@ -324,6 +329,7 @@ func (p *PairData) ToSimplifiedAPIData(pair *Pair) *SimplifiedPairAPIData {
 	pairAPIData.PairName = p.Pair.PairName
 	pairAPIData.LastPrice = pair.ParsePrice(p.Close)
 	pairAPIData.Volume = pair.ParseAmount(p.Volume)
+	pairAPIData.QuoteVolume = pair.ParseAmount(p.QuoteVolume)
 	pairAPIData.OrderVolume = pair.ParseAmount(p.OrderVolume)
 	pairAPIData.AverageOrderAmount = pair.ParseAmount(p.AverageOrderAmount)
 	pairAPIData.AverageTradeAmount = pair.ParseAmount(p.AverageTradeAmount)
@@ -341,6 +347,7 @@ func (p *PairData) ToAPIData(pair *Pair) *PairAPIData {
 	pairAPIData.Low = pair.ParsePrice(p.Low)
 	pairAPIData.Close = pair.ParsePrice(p.Close)
 	pairAPIData.Volume = pair.ParseAmount(p.Volume)
+	pairAPIData.QuoteVolume = pair.ParseAmount(p.QuoteVolume)
 	pairAPIData.Timestamp = int(p.Timestamp)
 	pairAPIData.OrderVolume = pair.ParseAmount(p.OrderVolume)
 	pairAPIData.OrderCount = int(p.OrderCount)
@@ -362,6 +369,7 @@ type PairAPIData struct {
 	Low                float64 `json:"low" bson:"low"`
 	Close              float64 `json:"close" bson:"close"`
 	Volume             float64 `json:"volume" bson:"volume"`
+	QuoteVolume        float64 `json:"quoteVolume" bson:"quoteVolume"`
 	Timestamp          int     `json:"timestamp" bson:"timestamp"`
 	OrderVolume        float64 `json:"orderVolume" bson:"orderVolume"`
 	OrderCount         int     `json:"orderCount" bson:"orderCount"`
@@ -381,6 +389,7 @@ type SimplifiedPairAPIData struct {
 	TradeCount         int     `json:"tradeCount"`
 	OrderCount         int     `json:"orderCount"`
 	Volume             float64 `json:"volume"`
+	QuoteVolume        float64 `json:"quoteVolume"`
 	OrderVolume        float64 `json:"orderVolume"`
 	AverageOrderAmount float64 `json:"averageOrderAmount"`
 	AverageTradeAmount float64 `json:"averageTradeAmount"`

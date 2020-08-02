@@ -201,17 +201,19 @@ func tradeToTick(trade *types.Trade, tick *types.Tick, ts int64) *types.Tick {
 				BaseToken:  trade.BaseToken,
 				QuoteToken: trade.QuoteToken,
 			},
-			Open:      trade.Price,
-			High:      trade.Price,
-			Low:       trade.Price,
-			Close:     trade.Price,
-			Volume:    trade.Amount,
-			Count:     1,
-			Timestamp: ts * 1000,
+			Open:        trade.Price,
+			High:        trade.Price,
+			Low:         trade.Price,
+			Close:       trade.Price,
+			Volume:      trade.Amount,
+			QuoteVolume: trade.QuoteAmount,
+			Count:       1,
+			Timestamp:   ts * 1000,
 		}
 	} else {
 		tick.Close = trade.Price
 		tick.Volume = tick.Volume + trade.Amount
+		tick.QuoteVolume = tick.QuoteVolume + trade.QuoteAmount
 
 		tick.Count++
 		if trade.Price > tick.High {
