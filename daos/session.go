@@ -259,10 +259,10 @@ func (d *Database) Aggregate(dbName, collection string, query []bson.M, response
 	sc := d.Session.Copy()
 	defer sc.Close()
 
-	collation := mgo.Collation{Locale: "en", NumericOrdering: true}
+	//	collation := mgo.Collation{Locale: "en", NumericOrdering: true}
 	result := reflect.ValueOf(response).Interface()
 
-	err := sc.DB(dbName).C(collection).Pipe(query).Collation(&collation).All(result)
+	err := sc.DB(dbName).C(collection).Pipe(query). /*.Collation(&collation)*/ All(result)
 	if err != nil {
 		logger.Error(err)
 		return err
