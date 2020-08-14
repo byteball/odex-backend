@@ -3,7 +3,7 @@ package operator
 import (
 	"encoding/json"
 	"errors"
-	"sync"
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/spf13/cast"
 

@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"sync"
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/types"
 	"github.com/gorilla/websocket"

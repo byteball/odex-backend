@@ -3,7 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"errors"
-	"sync"
+
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/rabbitmq"

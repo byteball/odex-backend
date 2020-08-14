@@ -6,7 +6,7 @@ import (
 	"log"
 	"math"
 	"strings"
-	"sync"
+	sync "github.com/sasha-s/go-deadlock"
 	"time"
 
 	"github.com/spf13/cast"

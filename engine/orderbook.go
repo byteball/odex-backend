@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"sync"
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/rabbitmq"
