@@ -1,14 +1,21 @@
 package ws
 
+import (
+	sync "github.com/sasha-s/go-deadlock"
+)
+
 // OrderConn is websocket order connection struct
 // It holds the reference to connection and the channel of type OrderMessage
 
 type OrderConnection []*Client
 
 var orderConnections map[string]OrderConnection
+var mutex sync.Mutex
 
 // GetOrderConn returns the connection associated with an order ID
 func GetOrderConnections(address string) OrderConnection {
+	mutex.Lock()
+	defer mutex.Unlock()
 	c := orderConnections[address]
 	if c == nil {
 		logger.Warning("No connection found for address", address)
@@ -21,6 +28,8 @@ func GetOrderConnections(address string) OrderConnection {
 func OrderSocketUnsubscribeHandler(a string) func(client *Client) {
 	return func(client *Client) {
 		logger.Info("In unsubscription handler")
+		mutex.Lock()
+		defer mutex.Unlock()
 		orderConnection := orderConnections[a]
 		if orderConnection == nil {
 			logger.Info("No subscriptions")
@@ -45,6 +54,8 @@ func OrderSocketUnsubscribeHandler(a string) func(client *Client) {
 // It is called whenever a message is recieved over order channel
 func RegisterOrderConnection(a string, c *Client) {
 	logger.Info("Registering new order connection")
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	if orderConnections == nil {
 		orderConnections = make(map[string]OrderConnection)
@@ -68,6 +79,8 @@ func RegisterOrderConnection(a string, c *Client) {
 }
 
 func IsClientConnected(a string, client *Client) bool {
+	mutex.Lock()
+	defer mutex.Unlock()
 	for _, c := range orderConnections[a] {
 		if c == client {
 			logger.Info("Client is connected")
