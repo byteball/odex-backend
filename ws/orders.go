@@ -79,8 +79,6 @@ func RegisterOrderConnection(a string, c *Client) {
 }
 
 func IsClientConnected(a string, client *Client) bool {
-	mutex.Lock()
-	defer mutex.Unlock()
 	for _, c := range orderConnections[a] {
 		if c == client {
 			logger.Info("Client is connected")
