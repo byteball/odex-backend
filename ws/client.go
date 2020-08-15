@@ -64,9 +64,11 @@ func (c *Client) SendMessage(channel string, msgType string, payload interface{}
 
 func (c *Client) closeConnection() {
 	subscriptionMutex.Lock()
-	defer subscriptionMutex.Unlock()
+	handlers := unsubscribeHandlers[c]
+	delete(unsubscribeHandlers, c)
+	subscriptionMutex.Unlock()
 
-	for _, unsub := range unsubscribeHandlers[c] {
+	for _, unsub := range handlers {
 		unsub(c)
 	}
 
