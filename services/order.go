@@ -6,8 +6,9 @@ import (
 	"log"
 	"math"
 	"strings"
-	sync "github.com/sasha-s/go-deadlock"
 	"time"
+
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/spf13/cast"
 
@@ -805,9 +806,9 @@ func (s *OrderService) AdjustBalancesForUncommittedTrades(address string, balanc
 func (s *OrderService) FixOrderStatus(o *types.Order) {
 	s.mu.Lock()
 	memoryOrder := s.ordersInThePipeline[o.Hash]
-	s.mu.Unlock()
 	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
 		o.Status = "CANCELLED"
 		logger.Info("set status of order " + o.Hash + " to CANCELLED")
 	}
+	s.mu.Unlock()
 }
