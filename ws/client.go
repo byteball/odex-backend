@@ -53,13 +53,12 @@ func (c *Client) SendMessage(channel string, msgType string, payload interface{}
 	}
 
 	c.mu.Lock()
-	closed := c.closed
-	c.mu.Unlock()
-	if closed {
+	defer c.mu.Unlock()
+	if c.closed {
 		logger.Info("trying to SendMessage to a closed ws connection")
 		return
 	}
-	c.send <- m
+	go func() { c.send <- m }()
 }
 
 func (c *Client) closeConnection() {
