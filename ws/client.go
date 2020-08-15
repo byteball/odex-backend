@@ -98,11 +98,10 @@ func (c *Client) SendOrderErrorMessage(err error, h string) {
 	}
 
 	c.mu.Lock()
-	closed := c.closed
-	c.mu.Unlock()
-	if closed {
+	defer c.mu.Unlock()
+	if c.closed {
 		logger.Info("trying to SendOrderErrorMessage to a closed ws connection")
 		return
 	}
-	c.send <- m
+	go func() { c.send <- m }()
 }
