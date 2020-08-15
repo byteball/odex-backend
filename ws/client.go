@@ -53,8 +53,9 @@ func (c *Client) SendMessage(channel string, msgType string, payload interface{}
 	}
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
 		logger.Info("trying to SendMessage to a closed ws connection")
 		return
 	}
@@ -69,12 +70,12 @@ func (c *Client) closeConnection() {
 		unsub(c)
 	}
 
+	c.mu.Lock()
 	if !c.closed {
 		c.closed = true
-		c.mu.Lock()
 		close(c.send)
-		c.mu.Unlock()
 	}
+	c.mu.Unlock()
 
 	c.Close()
 }
@@ -96,8 +97,9 @@ func (c *Client) SendOrderErrorMessage(err error, h string) {
 	}
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
 		logger.Info("trying to SendOrderErrorMessage to a closed ws connection")
 		return
 	}
