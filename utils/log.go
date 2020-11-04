@@ -44,7 +44,7 @@ func NewStandardOutputLogger() *logging.Logger {
 		panic(err)
 	}
 
-	writer := io.MultiWriter(os.Stdout, mainLog)
+	writer := io.MultiWriter(os.Stdout /*, mainLog*/)
 	backend := logging.NewLogBackend(writer, "", 0)
 
 	formattedBackend := logging.NewBackendFormatter(backend, format)
@@ -83,7 +83,7 @@ func NewLogger(module string, logFile string) *logging.Logger {
 		panic(err)
 	}
 
-	writer := io.MultiWriter(os.Stdout, mainLog, log)
+	writer := io.MultiWriter(os.Stdout /*, mainLog*/, log)
 	backend := logging.NewLogBackend(writer, "", 0)
 
 	formattedBackend := logging.NewBackendFormatter(backend, format)
