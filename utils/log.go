@@ -24,7 +24,7 @@ var OperatorMessagesLogger = NewFileLogger("operator", "./logs/operator.log")
 func NewStandardOutputLogger() *logging.Logger {
 	_, fileName, _, _ := runtime.Caller(1)
 	logDir := path.Join(path.Dir(fileName), "../logs/")
-	mainLogFile := path.Join(path.Dir(fileName), "../logs/main.log")
+	//	mainLogFile := path.Join(path.Dir(fileName), "../logs/main.log")
 
 	logger, err := logging.GetLogger("api")
 	if err != nil {
@@ -39,10 +39,10 @@ func NewStandardOutputLogger() *logging.Logger {
 		os.Mkdir(logDir, os.ModePerm)
 	}
 
-	mainLog, err := os.OpenFile(mainLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
+	/*	mainLog, err := os.OpenFile(mainLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic(err)
+		}*/
 
 	writer := io.MultiWriter(os.Stdout /*, mainLog*/)
 	backend := logging.NewLogBackend(writer, "", 0)
@@ -57,7 +57,7 @@ func NewStandardOutputLogger() *logging.Logger {
 func NewLogger(module string, logFile string) *logging.Logger {
 	_, fileName, _, _ := runtime.Caller(1)
 	logDir := path.Join(path.Dir(fileName), "../logs/")
-	mainLogFile := path.Join(path.Dir(fileName), "../logs/main.log")
+	//	mainLogFile := path.Join(path.Dir(fileName), "../logs/main.log")
 	logFile = path.Join(path.Dir(fileName), "../", logFile)
 
 	logger, err := logging.GetLogger("api")
@@ -73,10 +73,10 @@ func NewLogger(module string, logFile string) *logging.Logger {
 		os.Mkdir(logDir, os.ModePerm)
 	}
 
-	mainLog, err := os.OpenFile(mainLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
+	/*	mainLog, err := os.OpenFile(mainLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic(err)
+		}*/
 
 	log, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
