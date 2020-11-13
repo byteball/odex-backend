@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+
 	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/interfaces"
@@ -240,6 +241,9 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 			takerOrder.RemainingSellAmount = 0
 
 			makerOrder.Status = "PARTIAL_FILLED"
+			if makerOrder.RemainingSellAmount == 0 {
+				makerOrder.Status = "FILLED"
+			}
 			takerOrder.Status = "FILLED"
 		} else { // maker <= taker
 			tradeAmount = makerOrder.RemainingAmount()
@@ -279,6 +283,9 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 			}
 
 			makerOrder.Status = "PARTIAL_FILLED"
+			if makerOrder.RemainingSellAmount == 0 {
+				makerOrder.Status = "FILLED"
+			}
 			takerOrder.Status = "FILLED"
 		} else { // maker <= taker
 			tradeAmount = makerOutput
