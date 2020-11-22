@@ -38,6 +38,7 @@ func TestCancelOrder(t *testing.T) {
 	}
 
 	orderDao.On("GetByHash", o.Hash).Return(&o, nil)
+	orderDao.On("UpdateOrderStatus", o.Hash, "CANCELLED").Return(nil)
 	engine.On("CancelOrder", oc).Return(nil)
 
 	err := orderService.CancelOrder(oc)

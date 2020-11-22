@@ -31,6 +31,11 @@ func (_m *OrderService) AdjustBalancesForUncommittedTrades(address string, balan
 	return r0
 }
 
+// CancelExpiredOrders provides a mock function with given fields:
+func (_m *OrderService) CancelExpiredOrders() {
+	_m.Called()
+}
+
 // CancelOrder provides a mock function with given fields: oc
 func (_m *OrderService) CancelOrder(oc *types.OrderCancel) error {
 	ret := _m.Called(oc)

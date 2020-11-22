@@ -187,7 +187,7 @@ func TestHandleGetToken(t *testing.T) {
 		Asset:    asset,
 	}
 
-	tokenService.On("GetByAsset", asset).Return(&t1, nil)
+	tokenService.On("GetByAssetOrSymbol", asset).Return(&t1, nil)
 
 	url := "/tokens/" + url.PathEscape(asset)
 	req, err := http.NewRequest("GET", url, nil)
@@ -207,7 +207,7 @@ func TestHandleGetToken(t *testing.T) {
 	}{}
 	json.NewDecoder(rr.Body).Decode(&result)
 
-	tokenService.AssertCalled(t, "GetByAsset", asset)
+	tokenService.AssertCalled(t, "GetByAssetOrSymbol", asset)
 	testutils.Compare(t, &t1, &result.Data)
 }
 

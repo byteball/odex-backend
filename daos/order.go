@@ -813,6 +813,10 @@ func (dao *OrderDao) GetMatchingBuyOrders(o *types.Order) ([]*types.Order, error
 		"matcherAddress": o.MatcherAddress,
 		"side":           "BUY",
 		"price":          bson.M{"$gte": o.Price},
+		"$or": []bson.M{
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$exists": false}},
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix() + 60}},
+		},
 	}
 	/*q := []bson.M{
 		bson.M{
@@ -851,6 +855,10 @@ func (dao *OrderDao) GetMatchingSellOrders(o *types.Order) ([]*types.Order, erro
 		"matcherAddress": o.MatcherAddress,
 		"side":           "SELL",
 		"price":          bson.M{"$lte": o.Price},
+		"$or": []bson.M{
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$exists": false}},
+			bson.M{"originalOrder.signed_message.expiry_ts": bson.M{"$gte": time.Now().Unix() + 60}},
+		},
 	}
 	/*q := []bson.M{
 		bson.M{
@@ -870,6 +878,23 @@ func (dao *OrderDao) GetMatchingSellOrders(o *types.Order) ([]*types.Order, erro
 
 	err := db.GetAndSort(dao.dbName, dao.collectionName, q, []string{"price", "createdAt"}, 0, 0, &orders)
 	//err := db.Aggregate(dao.dbName, dao.collectionName, q, &orders)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (dao *OrderDao) GetExpiredOrders() ([]*types.Order, error) {
+	var orders []*types.Order
+
+	q := bson.M{
+		"status":                                 bson.M{"$in": []string{"OPEN", "PARTIAL_FILLED"}},
+		"originalOrder.signed_message.expiry_ts": bson.M{"$lte": time.Now().Unix()},
+	}
+
+	err := db.Get(dao.dbName, dao.collectionName, q, 0, 0, &orders)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

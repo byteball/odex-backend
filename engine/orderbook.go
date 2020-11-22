@@ -27,7 +27,8 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"sync"
+
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/rabbitmq"
@@ -139,7 +140,7 @@ func (ob *OrderBook) buyOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 	}
 
-	//TODO refactor
+	// the order can be partial filled and then immediately cancelled
 	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
@@ -199,7 +200,7 @@ func (ob *OrderBook) sellOrder(o *types.Order) (*types.EngineResponse, error) {
 		}
 	}
 
-	//TODO refactor
+	// the order can be partial filled and then immediately cancelled
 	ob.orderService.FixOrderStatus(o)
 	_, err = ob.orderDao.FindAndModify(o.Hash, o)
 	if err != nil {
@@ -230,7 +231,7 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 		makerQuoteOutput := round(float64(makerOrder.RemainingSellAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
 		//if makerOrder.RemainingSellAmount > takerOutput {
 		if makerQuoteOutput > takerOrder.RemainingSellAmount {
-			tradeAmount = round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.Price))
+			tradeAmount = round(float64(takerOrder.RemainingSellAmount) / toOscriptPrecision(makerOrder.OriginalPrice()))
 			tradeQuoteAmount = takerOrder.RemainingSellAmount
 
 			makerOrder.FilledAmount += tradeAmount
@@ -240,10 +241,13 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 			takerOrder.RemainingSellAmount = 0
 
 			makerOrder.Status = "PARTIAL_FILLED"
+			if makerOrder.RemainingSellAmount == 0 {
+				makerOrder.Status = "FILLED"
+			}
 			takerOrder.Status = "FILLED"
 		} else { // maker <= taker
 			tradeAmount = makerOrder.RemainingAmount()
-			tradeQuoteAmount = round(float64(tradeAmount) * toOscriptPrecision(makerOrder.Price))
+			tradeQuoteAmount = round(float64(tradeAmount) * toOscriptPrecision(makerOrder.OriginalPrice()))
 
 			makerOrder.FilledAmount += tradeAmount
 			makerOrder.RemainingSellAmount -= tradeAmount
@@ -279,6 +283,9 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 			}
 
 			makerOrder.Status = "PARTIAL_FILLED"
+			if makerOrder.RemainingSellAmount == 0 {
+				makerOrder.Status = "FILLED"
+			}
 			takerOrder.Status = "FILLED"
 		} else { // maker <= taker
 			tradeAmount = makerOutput

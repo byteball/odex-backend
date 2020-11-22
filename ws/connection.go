@@ -35,9 +35,11 @@ func ConnectionEndpoint(w http.ResponseWriter, r *http.Request) {
 		logger.Error(err)
 		return
 	}
+	logger.Info("new ws connection")
 
 	c := NewClient(conn)
 	c.SetCloseHandler(closeHandler(c))
+	logger.Info("created new ws client")
 
 	go readHandler(c)
 	go writeHandler(c)

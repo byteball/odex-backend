@@ -6,7 +6,9 @@ import (
 	"log"
 	"math"
 	"strings"
-	"sync"
+	"time"
+
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/spf13/cast"
 
@@ -46,7 +48,7 @@ func NewOrderService(
 	orderChannels := make(map[string]chan *types.WebsocketEvent)
 	ordersInThePipeline := make(map[string]*types.Order)
 
-	return &OrderService{
+	s := &OrderService{
 		orderDao,
 		pairDao,
 		accountDao,
@@ -57,6 +59,13 @@ func NewOrderService(
 		ordersInThePipeline,
 		sync.Mutex{},
 	}
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range ticker.C {
+			s.CancelExpiredOrders()
+		}
+	}()
+	return s
 }
 
 // GetByID fetches the details of an order using order's mongo ID
@@ -97,8 +106,15 @@ func (s *OrderService) GetHistoryByUserAddress(addr string, limit ...int) ([]*ty
 // on rabbitmq queue for matching engine to process the order
 func (s *OrderService) NewOrder(o *types.Order) (e error) {
 	s.mu.Lock()
-	s.ordersInThePipeline[o.Hash] = o
+	existingOrder := s.ordersInThePipeline[o.Hash]
+	if existingOrder == nil {
+		s.ordersInThePipeline[o.Hash] = o
+	}
 	s.mu.Unlock()
+	if existingOrder != nil {
+		logger.Info("duplicate order found in memory", o.Hash)
+		return nil // not an error
+	}
 	defer func() {
 		if e != nil {
 			s.mu.Lock()
@@ -106,6 +122,16 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 			s.mu.Unlock()
 		}
 	}()
+
+	existingOrder, daoErr := s.orderDao.GetByHash(o.Hash)
+	if daoErr != nil {
+		logger.Error(daoErr)
+		return daoErr
+	}
+	if existingOrder != nil {
+		logger.Info("duplicate order found in db", o.Hash)
+		return nil // not an error
+	}
 
 	if err := o.Validate(); err != nil {
 		logger.Error(err)
@@ -313,6 +339,21 @@ func (s *OrderService) CancelOrdersSignedByRevokedSigner(address string, signer 
 		panic(err)
 	}
 	logger.Info("will cancel", len(orders), "orders due to revocation of authorization on", address, "from signer", signer)
+	for _, order := range orders {
+		order.Status = "AUTO_CANCELLED"
+		err = s.broker.PublishCancelOrderMessage(order)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func (s *OrderService) CancelExpiredOrders() {
+	orders, err := s.orderDao.GetExpiredOrders()
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("will cancel", len(orders), "expired orders")
 	for _, order := range orders {
 		order.Status = "AUTO_CANCELLED"
 		err = s.broker.PublishCancelOrderMessage(order)
@@ -765,9 +806,9 @@ func (s *OrderService) AdjustBalancesForUncommittedTrades(address string, balanc
 func (s *OrderService) FixOrderStatus(o *types.Order) {
 	s.mu.Lock()
 	memoryOrder := s.ordersInThePipeline[o.Hash]
-	s.mu.Unlock()
 	if memoryOrder != nil && memoryOrder.Status == "CANCELLED" {
 		o.Status = "CANCELLED"
 		logger.Info("set status of order " + o.Hash + " to CANCELLED")
 	}
+	s.mu.Unlock()
 }

@@ -235,12 +235,13 @@ func (s *PairService) GetTokenPairData(bt, qt string) ([]*types.Tick, error) {
 					"pairName":   "$pairName",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"open":   bson.M{"$first": "$price"},
-				"high":   bson.M{"$max": "$price"},
-				"low":    bson.M{"$min": "$price"},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"open":        bson.M{"$first": "$price"},
+				"high":        bson.M{"$max": "$price"},
+				"low":         bson.M{"$min": "$price"},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -281,12 +282,13 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"open":   bson.M{"$first": "$price"},
-				"high":   bson.M{"$max": "$price"},
-				"low":    bson.M{"$min": "$price"},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"open":        bson.M{"$first": "$price"},
+				"high":        bson.M{"$max": "$price"},
+				"low":         bson.M{"$min": "$price"},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -367,6 +369,7 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 			High:               0,
 			Low:                0,
 			Volume:             0,
+			QuoteVolume:        0,
 			Close:              0,
 			Count:              0,
 			OrderVolume:        0,
@@ -384,6 +387,7 @@ func (s *PairService) GetAllExactTokenPairData() ([]*types.PairData, error) {
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
+				pairData.QuoteVolume = t.QuoteVolume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
 				pairData.AverageTradeAmount = (t.Volume / t.Count)
@@ -450,12 +454,13 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"open":   bson.M{"$first": "$price"},
-				"high":   bson.M{"$max": "$price"},
-				"low":    bson.M{"$min": "$price"},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"open":        bson.M{"$first": "$price"},
+				"high":        bson.M{"$max": "$price"},
+				"low":         bson.M{"$min": "$price"},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -536,6 +541,7 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 			High:               0,
 			Low:                0,
 			Volume:             0,
+			QuoteVolume:        0,
 			Close:              0,
 			Count:              0,
 			OrderVolume:        0,
@@ -553,6 +559,7 @@ func (s *PairService) GetAllTokenPairData() ([]*types.PairAPIData, error) {
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
+				pairData.QuoteVolume = t.QuoteVolume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
 				pairData.AverageTradeAmount = (t.Volume / t.Count)
@@ -618,12 +625,13 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 					"baseToken":  "$baseToken",
 					"quoteToken": "$quoteToken",
 				},
-				"count":  bson.M{"$sum": 1},
-				"open":   bson.M{"$first": "$price"},
-				"high":   bson.M{"$max": "$price"},
-				"low":    bson.M{"$min": "$price"},
-				"close":  bson.M{"$last": "$price"},
-				"volume": bson.M{"$sum": "$amount"},
+				"count":       bson.M{"$sum": 1},
+				"open":        bson.M{"$first": "$price"},
+				"high":        bson.M{"$max": "$price"},
+				"low":         bson.M{"$min": "$price"},
+				"close":       bson.M{"$last": "$price"},
+				"volume":      bson.M{"$sum": "$amount"},
+				"quoteVolume": bson.M{"$sum": "$quoteAmount"},
 			},
 		},
 	}
@@ -704,6 +712,7 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 			High:               0,
 			Low:                0,
 			Volume:             0,
+			QuoteVolume:        0,
 			Close:              0,
 			Count:              0,
 			OrderVolume:        0,
@@ -721,6 +730,7 @@ func (s *PairService) GetAllSimplifiedTokenPairData() ([]*types.SimplifiedPairAP
 				pairData.High = t.High
 				pairData.Low = t.Low
 				pairData.Volume = t.Volume
+				pairData.QuoteVolume = t.QuoteVolume
 				pairData.Close = t.Close
 				pairData.Count = t.Count
 				pairData.AverageTradeAmount = (t.Volume / t.Count)

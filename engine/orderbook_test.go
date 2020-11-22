@@ -6,6 +6,8 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/byteball/odex-backend/daos"
 	"github.com/byteball/odex-backend/rabbitmq"
 	"github.com/byteball/odex-backend/types"
@@ -54,6 +56,7 @@ func setupTest() (
 	orderService := new(mocks.OrderService)
 	pairDao.On("GetAll").Return([]types.Pair{*pair}, nil)
 	obyteProvider.On("GetOperatorAddress").Return(matcherAddress)
+	orderService.On("FixOrderStatus", mock.Anything).Return()
 
 	eng := NewEngine(rabbitConn, orderDao, tradeDao, pairDao, obyteProvider, orderService)
 	maker := testutils.GetTestWallet1()

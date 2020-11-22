@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"sync"
+	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/byteball/odex-backend/types"
 	"github.com/gorilla/websocket"
@@ -58,23 +58,25 @@ func (c *Client) SendMessage(channel string, msgType string, payload interface{}
 		logger.Info("trying to SendMessage to a closed ws connection")
 		return
 	}
-	c.send <- m
+	go func() { c.send <- m }()
 }
 
 func (c *Client) closeConnection() {
 	subscriptionMutex.Lock()
-	defer subscriptionMutex.Unlock()
+	handlers := unsubscribeHandlers[c]
+	delete(unsubscribeHandlers, c)
+	subscriptionMutex.Unlock()
 
-	for _, unsub := range unsubscribeHandlers[c] {
+	for _, unsub := range handlers {
 		unsub(c)
 	}
 
+	c.mu.Lock()
 	if !c.closed {
 		c.closed = true
-		c.mu.Lock()
-		close(c.send)
-		c.mu.Unlock()
+		//	close(c.send)
 	}
+	c.mu.Unlock()
 
 	c.Close()
 }
@@ -101,5 +103,5 @@ func (c *Client) SendOrderErrorMessage(err error, h string) {
 		logger.Info("trying to SendOrderErrorMessage to a closed ws connection")
 		return
 	}
-	c.send <- m
+	go func() { c.send <- m }()
 }

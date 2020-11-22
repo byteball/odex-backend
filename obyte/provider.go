@@ -90,6 +90,7 @@ func (o *ObyteProvider) GetFees() (float64, float64) {
 	}
 	matcherFee = fees[0]
 	affiliateFee = fees[1]
+	feesUpdated = true
 	return matcherFee, affiliateFee
 }
 

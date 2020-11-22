@@ -8,14 +8,15 @@ import (
 
 // Tick is the format in which mongo aggregate pipeline returns data when queried for OHLCV data
 type Tick struct {
-	Pair      PairID  `json:"id,omitempty" bson:"_id"`
-	Close     float64 `json:"close,omitempty" bson:"close"`
-	Count     int64   `json:"count,omitempty" bson:"count"`
-	High      float64 `json:"high,omitempty" bson:"high"`
-	Low       float64 `json:"low,omitempty" bson:"low"`
-	Open      float64 `json:"open,omitempty" bson:"open"`
-	Volume    int64   `json:"volume,omitempty" bson:"volume"`
-	Timestamp int64   `json:"timestamp,omitempty" bson:"timestamp"`
+	Pair        PairID  `json:"id,omitempty" bson:"_id"`
+	Close       float64 `json:"close,omitempty" bson:"close"`
+	Count       int64   `json:"count,omitempty" bson:"count"`
+	High        float64 `json:"high,omitempty" bson:"high"`
+	Low         float64 `json:"low,omitempty" bson:"low"`
+	Open        float64 `json:"open,omitempty" bson:"open"`
+	Volume      int64   `json:"volume,omitempty" bson:"volume"`
+	QuoteVolume int64   `json:"quoteVolume,omitempty" bson:"quoteVolume"`
+	Timestamp   int64   `json:"timestamp,omitempty" bson:"timestamp"`
 }
 
 // PairID is the subdocument for aggregate grouping for OHLCV data
@@ -73,6 +74,10 @@ func (t *Tick) MarshalJSON() ([]byte, error) {
 		tick["volume"] = t.Volume
 	}
 
+	if t.QuoteVolume != 0 {
+		tick["quoteVolume"] = t.QuoteVolume
+	}
+
 	if t.Close != 0 {
 		tick["close"] = t.Close
 	}
@@ -127,6 +132,10 @@ func (t *Tick) UnmarshalJSON(b []byte) error {
 		t.Volume = int64(tick["volume"].(float64))
 	}
 
+	if tick["quoteVolume"] != nil {
+		t.QuoteVolume = int64(tick["quoteVolume"].(float64))
+	}
+
 	if tick["count"] != nil {
 		t.Count = int64(tick["count"].(float64))
 	}
@@ -149,16 +158,18 @@ func (t *Tick) GetBSON() (interface{}, error) {
 	c := t.Close
 
 	v := t.Volume
+	qv := t.QuoteVolume
 
 	return struct {
-		ID        PairID  `json:"id,omitempty" bson:"_id"`
-		Count     int64   `json:"count" bson:"count"`
-		Open      float64 `json:"open" bson:"open"`
-		High      float64 `json:"high" bson:"high"`
-		Low       float64 `json:"low" bson:"low"`
-		Close     float64 `json:"close" bson:"close"`
-		Volume    int64   `json:"volume" bson:"volume"`
-		Timestamp int64   `json:"timestamp" bson:"timestamp"`
+		ID          PairID  `json:"id,omitempty" bson:"_id"`
+		Count       int64   `json:"count" bson:"count"`
+		Open        float64 `json:"open" bson:"open"`
+		High        float64 `json:"high" bson:"high"`
+		Low         float64 `json:"low" bson:"low"`
+		Close       float64 `json:"close" bson:"close"`
+		Volume      int64   `json:"volume" bson:"volume"`
+		QuoteVolume int64   `json:"quoteVolume" bson:"quoteVolume"`
+		Timestamp   int64   `json:"timestamp" bson:"timestamp"`
 	}{
 		ID: PairID{
 			t.Pair.PairName,
@@ -166,13 +177,14 @@ func (t *Tick) GetBSON() (interface{}, error) {
 			t.Pair.QuoteToken,
 		},
 
-		Open:      o,
-		High:      h,
-		Low:       l,
-		Close:     c,
-		Volume:    v,
-		Count:     count,
-		Timestamp: t.Timestamp,
+		Open:        o,
+		High:        h,
+		Low:         l,
+		Close:       c,
+		Volume:      v,
+		QuoteVolume: qv,
+		Count:       count,
+		Timestamp:   t.Timestamp,
 	}, nil
 }
 
@@ -184,14 +196,15 @@ func (t *Tick) SetBSON(raw bson.Raw) error {
 	}
 
 	decoded := new(struct {
-		Pair      PairIDRecord `json:"pair,omitempty" bson:"_id"`
-		Count     int64        `json:"count" bson:"count"`
-		Open      float64      `json:"open" bson:"open"`
-		High      float64      `json:"high" bson:"high"`
-		Low       float64      `json:"low" bson:"low"`
-		Close     float64      `json:"close" bson:"close"`
-		Volume    int64        `json:"volume" bson:"volume"`
-		Timestamp int64        `json:"timestamp" bson:"timestamp"`
+		Pair        PairIDRecord `json:"pair,omitempty" bson:"_id"`
+		Count       int64        `json:"count" bson:"count"`
+		Open        float64      `json:"open" bson:"open"`
+		High        float64      `json:"high" bson:"high"`
+		Low         float64      `json:"low" bson:"low"`
+		Close       float64      `json:"close" bson:"close"`
+		Volume      int64        `json:"volume" bson:"volume"`
+		QuoteVolume int64        `json:"quoteVolume" bson:"quoteVolume"`
+		Timestamp   int64        `json:"timestamp" bson:"timestamp"`
 	})
 
 	err := raw.Unmarshal(decoded)
@@ -211,6 +224,7 @@ func (t *Tick) SetBSON(raw bson.Raw) error {
 	l := decoded.Low
 	c := decoded.Close
 	v := decoded.Volume
+	qv := decoded.QuoteVolume
 
 	t.Count = count
 	t.Close = c
@@ -218,6 +232,7 @@ func (t *Tick) SetBSON(raw bson.Raw) error {
 	t.Low = l
 	t.Open = o
 	t.Volume = v
+	t.QuoteVolume = qv
 
 	t.Timestamp = decoded.Timestamp
 	return nil
