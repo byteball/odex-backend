@@ -31,6 +31,7 @@ type Trade struct {
 	QuoteAmount              int64         `json:"quoteAmount" bson:"quoteAmount"`
 	RemainingTakerSellAmount int64         `json:"remainingTakerSellAmount" bson:"remainingTakerSellAmount"`
 	RemainingMakerSellAmount int64         `json:"remainingMakerSellAmount" bson:"remainingMakerSellAmount"`
+	MakerSide                string        `json:"makerSide" bson:"makerSide"`
 }
 
 type TradeRecord struct {
@@ -52,6 +53,7 @@ type TradeRecord struct {
 	RemainingTakerSellAmount int64         `json:"remainingTakerSellAmount" bson:"remainingTakerSellAmount"`
 	RemainingMakerSellAmount int64         `json:"remainingMakerSellAmount" bson:"remainingMakerSellAmount"`
 	Status                   string        `json:"status" bson:"status"`
+	MakerSide                string        `json:"makerSide" bson:"makerSide"`
 }
 
 // NewTrade returns a new unsigned trade corresponding to an Order, amount and taker address
@@ -141,6 +143,7 @@ func (t *Trade) MarshalJSON() ([]byte, error) {
 		"quoteAmount":              t.QuoteAmount,
 		"remainingTakerSellAmount": t.RemainingTakerSellAmount,
 		"remainingMakerSellAmount": t.RemainingMakerSellAmount,
+		"makerSide":                t.MakerSide,
 		"createdAt":                t.CreatedAt.Format(time.RFC3339Nano),
 	}
 
@@ -257,6 +260,10 @@ func (t *Trade) UnmarshalJSON(b []byte) error {
 		t.CreatedAt = tm
 	}
 
+	if trade["makerSide"] != nil {
+		t.MakerSide = trade["makerSide"].(string)
+	}
+
 	return nil
 }
 
@@ -285,6 +292,7 @@ func (t *Trade) GetBSON() (interface{}, error) {
 		QuoteAmount:              t.QuoteAmount,
 		RemainingTakerSellAmount: t.RemainingTakerSellAmount,
 		RemainingMakerSellAmount: t.RemainingMakerSellAmount,
+		MakerSide:                t.MakerSide,
 	}
 
 	return tr, nil
@@ -310,6 +318,7 @@ func (t *Trade) SetBSON(raw bson.Raw) error {
 		QuoteAmount              int64         `json:"quoteAmount" bson:"quoteAmount"`
 		RemainingTakerSellAmount int64         `json:"remainingTakerSellAmount" bson:"remainingTakerSellAmount"`
 		RemainingMakerSellAmount int64         `json:"remainingMakerSellAmount" bson:"remainingMakerSellAmount"`
+		MakerSide                string        `json:"makerSide" bson:"makerSide"`
 	})
 
 	err := raw.Unmarshal(decoded)
@@ -333,6 +342,7 @@ func (t *Trade) SetBSON(raw bson.Raw) error {
 	t.RemainingTakerSellAmount = decoded.RemainingTakerSellAmount
 	t.RemainingMakerSellAmount = decoded.RemainingMakerSellAmount
 	t.Price = decoded.Price
+	t.MakerSide = decoded.MakerSide
 
 	t.CreatedAt = decoded.CreatedAt
 	t.UpdatedAt = decoded.UpdatedAt
@@ -383,6 +393,7 @@ func (t TradeBSONUpdate) GetBSON() (interface{}, error) {
 		"status":                   t.Status,
 		"remainingTakerSellAmount": t.RemainingTakerSellAmount,
 		"remainingMakerSellAmount": t.RemainingMakerSellAmount,
+		"makerSide":                t.MakerSide,
 	}
 
 	if t.Price != 0 {

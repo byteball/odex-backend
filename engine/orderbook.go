@@ -328,6 +328,7 @@ func (ob *OrderBook) execute(takerOrder *types.Order, makerOrder *types.Order) (
 		RemainingTakerSellAmount: takerOrder.RemainingSellAmount,
 		RemainingMakerSellAmount: makerOrder.RemainingSellAmount,
 		Status:                   "PENDING",
+		MakerSide:                makerOrder.Side,
 	}
 
 	trade.Hash = trade.ComputeHash()
