@@ -186,6 +186,17 @@ func (o *Order) OriginalPrice() float64 {
 	return OriginalOrderData["price"].(float64)
 }
 
+func (o *Order) MatcherFeeRate() float64 {
+	OriginalOrderData := o.OriginalOrder["signed_message"].(map[string]interface{})
+	if (OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["sell_asset"].(string)){
+		return OriginalOrderData["matcher_fee"].(float64) / OriginalOrderData["sell_amount"].(float64)
+	} else if (OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["buy_asset"].(string)){
+		return OriginalOrderData["matcher_fee"].(float64) / (OriginalOrderData["sell_amount"].(float64) * OriginalOrderData["price"].(float64))
+	} else {
+		panic("matcher fee asset not a pair asset")
+	}
+}
+
 /*func (o *Order) RemainingSellAmount() int64 {
 	//pairMultiplier := p.PairMultiplier()
 

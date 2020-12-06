@@ -705,7 +705,7 @@ func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
 		pp := o.Price
 		side := o.Side
 
-		amount, matcherAddress, err := s.orderDao.GetOrderBookPrice(p, pp, side)
+		amount, matcherAddress, matcherFeeRate, err := s.orderDao.GetOrderBookPrice(p, pp, side)
 		if err != nil {
 			logger.Error(err)
 		}
@@ -719,6 +719,7 @@ func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
 			"price":          pp,
 			"amount":         amount,
 			"matcherAddress": matcherAddress,
+			"matcherFeeRate": matcherFeeRate,
 		}
 
 		if side == "BUY" {
