@@ -708,6 +708,7 @@ func (dao *OrderDao) GetOrderBook(p *types.Pair) ([]map[string]interface{}, []ma
 			entry := map[string]interface{}{
 				"price":          o.Price,
 				"matcherAddress": o.MatcherAddress,
+				"matcherFeeRate": o.MatcherFeeRate(),
 				"amount":         sum,
 			}
 			if o.Side == "SELL" {
@@ -734,7 +735,7 @@ func (dao *OrderDao) GetOrderBook(p *types.Pair) ([]map[string]interface{}, []ma
 	return bids, asks, nil
 }
 
-func (dao *OrderDao) GetOrderBookPrice(p *types.Pair, pp float64, side string) (int64, string, error) {
+func (dao *OrderDao) GetOrderBookPrice(p *types.Pair, pp float64, side string) (int64, string, float64, error) {
 	q := bson.M{
 		"status":     bson.M{"$in": []string{"OPEN", "PARTIAL_FILLED"}},
 		"baseToken":  p.BaseAsset,
@@ -780,14 +781,16 @@ func (dao *OrderDao) GetOrderBookPrice(p *types.Pair, pp float64, side string) (
 		panic(err)
 	}
 	amount := int64(0)
+	matcherFeeRate := float64(0)
 	matcherAddress := ""
 	for _, o := range orders {
 		amount += o.Amount - o.FilledAmount
 		if matcherAddress == "" {
 			matcherAddress = o.MatcherAddress
+			matcherFeeRate = o.MatcherFeeRate()
 		}
 	}
-	return amount, matcherAddress, nil
+	return amount, matcherAddress, matcherFeeRate, nil
 
 	/*res := []map[string]interface{}{}
 	err := db.Aggregate(dao.dbName, dao.collectionName, q, &res)

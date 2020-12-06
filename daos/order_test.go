@@ -698,7 +698,7 @@ func ExampleGetOrderBookPrice() {
 		panic(err)
 	}
 
-	orderPricePoint, _, err := orderDao.GetOrderBookPrice(pair, float64(59303), "BUY")
+	orderPricePoint, _, __, err := orderDao.GetOrderBookPrice(pair, float64(59303), "BUY")
 	if err != nil {
 		panic(err)
 	}

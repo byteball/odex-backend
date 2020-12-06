@@ -36,7 +36,7 @@ type OrderDao interface {
 	UpdateOrderStatus(h string, status string) error
 	GetRawOrderBook(*types.Pair) ([]*types.Order, error)
 	GetOrderBook(*types.Pair) ([]map[string]interface{}, []map[string]interface{}, error)
-	GetOrderBookPrice(p *types.Pair, pp float64, side string) (int64, string, error)
+	GetOrderBookPrice(p *types.Pair, pp float64, side string) (int64, string, float64, error)
 	FindAndModify(h string, o *types.Order) (*types.Order, error)
 	Drop() error
 	Aggregate(q []bson.M) ([]*types.OrderData, error)
