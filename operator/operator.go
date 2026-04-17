@@ -3,6 +3,7 @@ package operator
 import (
 	"encoding/json"
 	"errors"
+
 	sync "github.com/sasha-s/go-deadlock"
 
 	"github.com/spf13/cast"
@@ -286,7 +287,7 @@ func (op *Operator) HandleEvents() error {
 				}
 
 				if bounced {
-					bounceMessage := response["error"].(string)
+					bounceMessage := response["error"].(map[string]interface{})["message"].(string)
 					op.HandleTxError(matches, bounceMessage) // will also update status to REJECTED
 					// the wallet sends balance updates only after successful trades
 					go op.sendBalancesUpdateAfterTrade(makerOrder.UserAddress)
