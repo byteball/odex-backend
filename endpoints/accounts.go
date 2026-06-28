@@ -2,12 +2,19 @@ package endpoints
 
 import (
 	"net/http"
+	"regexp"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils/httputils"
 	"github.com/gorilla/mux"
 )
+
+// Obyte addresses: 32 uppercase base32 characters (RFC 4648 alphabet: A-Z and 2-7)
+var validAddressRegexp = regexp.MustCompile(`^[A-Z2-7]{32}$`)
+
+// Obyte asset IDs: 44-character standard base64 (32 bytes → 43 base64 chars + one '=' pad)
+var validAssetRegexp = regexp.MustCompile(`^[A-Za-z0-9+/]{43}=$`)
 
 type accountEndpoint struct {
 	accountService interfaces.AccountService
@@ -148,9 +155,9 @@ func (e *accountEndpoint) handleGetAuthorizedAddresses(w http.ResponseWriter, r 
 }
 
 func isValidAddress(address string) bool {
-	return len(address) == 32
+	return validAddressRegexp.MatchString(address)
 }
 
 func isValidAsset(asset string) bool {
-	return len(asset) == 44 || asset == "base"
+	return asset == "base" || validAssetRegexp.MatchString(asset)
 }
