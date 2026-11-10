@@ -92,52 +92,65 @@ func (t *Tick) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON creates a trade object from a json byte string
 func (t *Tick) UnmarshalJSON(b []byte) error {
-	tick := map[string]interface{}{}
-	err := json.Unmarshal(b, &tick)
+	var tick struct {
+		Pair *struct {
+			PairName   string `json:"pairName"`
+			BaseToken  string `json:"baseToken"`
+			QuoteToken string `json:"quoteToken"`
+		} `json:"pair"`
+		Timestamp   *float64 `json:"timestamp"`
+		Open        *float64 `json:"open"`
+		High        *float64 `json:"high"`
+		Low         *float64 `json:"low"`
+		Close       *float64 `json:"close"`
+		Volume      *float64 `json:"volume"`
+		QuoteVolume *float64 `json:"quoteVolume"`
+		Count       *float64 `json:"count"`
+	}
 
+	err := json.Unmarshal(b, &tick)
 	if err != nil {
 		return err
 	}
 
-	if tick["pair"] != nil {
-		pair := tick["pair"].(map[string]interface{})
+	if tick.Pair != nil {
 		t.Pair = PairID{
-			PairName:   pair["pairName"].(string),
-			BaseToken:  pair["baseToken"].(string),
-			QuoteToken: pair["quoteToken"].(string),
+			PairName:   tick.Pair.PairName,
+			BaseToken:  tick.Pair.BaseToken,
+			QuoteToken: tick.Pair.QuoteToken,
 		}
 	}
 
-	if tick["timestamp"] != nil {
-		t.Timestamp = int64(tick["timestamp"].(float64))
+	if tick.Timestamp != nil {
+		t.Timestamp = int64(*tick.Timestamp)
 	}
 
-	if tick["open"] != nil {
-		t.Open = tick["open"].(float64)
+	if tick.Open != nil {
+		t.Open = *tick.Open
 	}
 
-	if tick["high"] != nil {
-		t.High = tick["high"].(float64)
+	if tick.High != nil {
+		t.High = *tick.High
 	}
 
-	if tick["low"] != nil {
-		t.Low = tick["low"].(float64)
+	if tick.Low != nil {
+		t.Low = *tick.Low
 	}
 
-	if tick["close"] != nil {
-		t.Close = tick["close"].(float64)
+	if tick.Close != nil {
+		t.Close = *tick.Close
 	}
 
-	if tick["volume"] != nil {
-		t.Volume = int64(tick["volume"].(float64))
+	if tick.Volume != nil {
+		t.Volume = int64(*tick.Volume)
 	}
 
-	if tick["quoteVolume"] != nil {
-		t.QuoteVolume = int64(tick["quoteVolume"].(float64))
+	if tick.QuoteVolume != nil {
+		t.QuoteVolume = int64(*tick.QuoteVolume)
 	}
 
-	if tick["count"] != nil {
-		t.Count = int64(tick["count"].(float64))
+	if tick.Count != nil {
+		t.Count = int64(*tick.Count)
 	}
 
 	return nil

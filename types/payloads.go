@@ -37,43 +37,52 @@ func (p NewOrderPayload) MarshalJSON() ([]byte, error) {
 }
 
 func (p *NewOrderPayload) UnmarshalJSON(b []byte) error {
-	decoded := map[string]interface{}{}
+	var decoded struct {
+		PairName         *string  `json:"pairName"`
+		UserAddress      *string  `json:"userAddress"`
+		MatcherAddress   *string  `json:"matcherAddress"`
+		AffiliateAddress *string  `json:"affiliateAddress"`
+		Amount           *float64 `json:"amount"`
+		Price            *float64 `json:"price"`
+		Side             *string  `json:"side"`
+		Hash             *string  `json:"hash"`
+	}
 
 	err := json.Unmarshal(b, &decoded)
 	if err != nil {
 		return err
 	}
 
-	if decoded["pairName"] != nil {
-		p.PairName = decoded["pairName"].(string)
+	if decoded.PairName != nil {
+		p.PairName = *decoded.PairName
 	}
 
-	if decoded["userAddress"] != nil {
-		p.UserAddress = decoded["userAddress"].(string)
+	if decoded.UserAddress != nil {
+		p.UserAddress = *decoded.UserAddress
 	}
 
-	if decoded["matcherAddress"] != nil {
-		p.MatcherAddress = decoded["matcherAddress"].(string)
+	if decoded.MatcherAddress != nil {
+		p.MatcherAddress = *decoded.MatcherAddress
 	}
 
-	if decoded["affiliateAddress"] != nil {
-		p.AffiliateAddress = decoded["affiliateAddress"].(string)
+	if decoded.AffiliateAddress != nil {
+		p.AffiliateAddress = *decoded.AffiliateAddress
 	}
 
-	if decoded["amount"] != nil {
-		p.Amount = int64(decoded["amount"].(float64))
+	if decoded.Amount != nil {
+		p.Amount = int64(*decoded.Amount)
 	}
 
-	if decoded["price"] != nil {
-		p.Price = decoded["price"].(float64) // FIX
+	if decoded.Price != nil {
+		p.Price = *decoded.Price
 	}
 
-	if decoded["side"] != nil {
-		p.Side = decoded["side"].(string)
+	if decoded.Side != nil {
+		p.Side = *decoded.Side
 	}
 
-	if decoded["hash"] != nil {
-		p.Hash = decoded["hash"].(string)
+	if decoded.Hash != nil {
+		p.Hash = *decoded.Hash
 	}
 	return nil
 }

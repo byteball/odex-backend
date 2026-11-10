@@ -41,22 +41,25 @@ func (oc *OrderCancel) String() string {
 
 // UnmarshalJSON creates an OrderCancel object from a json byte string
 func (oc *OrderCancel) UnmarshalJSON(b []byte) error {
-	parsed := map[string]interface{}{}
+	var parsed struct {
+		OrderHash   *string `json:"orderHash"`
+		UserAddress *string `json:"userAddress"`
+	}
 
 	err := json.Unmarshal(b, &parsed)
 	if err != nil {
 		return err
 	}
 
-	if parsed["orderHash"] == nil {
+	if parsed.OrderHash == nil {
 		return errors.New("Order Hash is missing")
 	}
-	oc.OrderHash = parsed["orderHash"].(string)
+	oc.OrderHash = *parsed.OrderHash
 
-	if parsed["userAddress"] == nil {
+	if parsed.UserAddress == nil {
 		return errors.New("userAddress is missing")
 	}
-	oc.UserAddress = parsed["userAddress"].(string)
+	oc.UserAddress = *parsed.UserAddress
 
 	return nil
 }

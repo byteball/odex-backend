@@ -172,96 +172,109 @@ func (t *Trade) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON creates a trade object from a json byte string
 func (t *Trade) UnmarshalJSON(b []byte) error {
-	trade := map[string]interface{}{}
+	var trade struct {
+		MakerOrderHash           *string  `json:"makerOrderHash"`
+		TakerOrderHash           *string  `json:"takerOrderHash"`
+		Hash                     *string  `json:"hash"`
+		QuoteToken               *string  `json:"quoteToken"`
+		BaseToken                *string  `json:"baseToken"`
+		Maker                    *string  `json:"maker"`
+		Taker                    *string  `json:"taker"`
+		ID                       *string  `json:"id"`
+		TxHash                   *string  `json:"txHash"`
+		PairName                 *string  `json:"pairName"`
+		Status                   *string  `json:"status"`
+		Price                    *float64 `json:"price"`
+		Amount                   *float64 `json:"amount"`
+		QuoteAmount              *float64 `json:"quoteAmount"`
+		RemainingTakerSellAmount *float64 `json:"remainingTakerSellAmount"`
+		RemainingMakerSellAmount *float64 `json:"remainingMakerSellAmount"`
+		CreatedAt                *string  `json:"createdAt"`
+		MakerSide                *string  `json:"makerSide"`
+	}
 
 	err := json.Unmarshal(b, &trade)
 	if err != nil {
 		return err
 	}
 
-	if trade["makerOrderHash"] == nil {
+	if trade.MakerOrderHash == nil {
 		return errors.New("Order Hash is not set")
-	} else {
-		t.MakerOrderHash = trade["makerOrderHash"].(string)
+	}
+	t.MakerOrderHash = *trade.MakerOrderHash
+
+	if trade.TakerOrderHash != nil {
+		t.TakerOrderHash = *trade.TakerOrderHash
 	}
 
-	if trade["takerOrderHash"] != nil {
-		t.TakerOrderHash = trade["takerOrderHash"].(string)
-	}
-
-	if trade["hash"] == nil {
+	if trade.Hash == nil {
 		return errors.New("Hash is not set")
-	} else {
-		t.Hash = trade["hash"].(string)
 	}
+	t.Hash = *trade.Hash
 
-	if trade["quoteToken"] == nil {
+	if trade.QuoteToken == nil {
 		return errors.New("Quote token is not set")
-	} else {
-		t.QuoteToken = trade["quoteToken"].(string)
 	}
+	t.QuoteToken = *trade.QuoteToken
 
-	if trade["baseToken"] == nil {
+	if trade.BaseToken == nil {
 		return errors.New("Base token is not set")
-	} else {
-		t.BaseToken = trade["baseToken"].(string)
 	}
+	t.BaseToken = *trade.BaseToken
 
-	if trade["maker"] == nil {
+	if trade.Maker == nil {
 		return errors.New("Maker is not set")
-	} else {
-		t.Taker = trade["taker"].(string)
 	}
+	t.Maker = *trade.Maker
 
-	if trade["taker"] == nil {
+	if trade.Taker == nil {
 		return errors.New("Taker is not set")
-	} else {
-		t.Maker = trade["maker"].(string)
+	}
+	t.Taker = *trade.Taker
+
+	if trade.ID != nil && bson.IsObjectIdHex(*trade.ID) {
+		t.ID = bson.ObjectIdHex(*trade.ID)
 	}
 
-	if trade["id"] != nil && bson.IsObjectIdHex(trade["id"].(string)) {
-		t.ID = bson.ObjectIdHex(trade["id"].(string))
+	if trade.TxHash != nil {
+		t.TxHash = *trade.TxHash
 	}
 
-	if trade["txHash"] != nil {
-		t.TxHash = trade["txHash"].(string)
+	if trade.PairName != nil {
+		t.PairName = *trade.PairName
 	}
 
-	if trade["pairName"] != nil {
-		t.PairName = trade["pairName"].(string)
+	if trade.Status != nil {
+		t.Status = *trade.Status
 	}
 
-	if trade["status"] != nil {
-		t.Status = trade["status"].(string)
+	if trade.Price != nil {
+		t.Price = *trade.Price
 	}
 
-	if trade["price"] != nil {
-		t.Price = trade["price"].(float64) // FIX
+	if trade.Amount != nil {
+		t.Amount = int64(*trade.Amount)
 	}
 
-	if trade["amount"] != nil {
-		t.Amount = int64(trade["amount"].(float64))
+	if trade.QuoteAmount != nil {
+		t.QuoteAmount = int64(*trade.QuoteAmount)
 	}
 
-	if trade["quoteAmount"] != nil {
-		t.QuoteAmount = int64(trade["quoteAmount"].(float64))
+	if trade.RemainingTakerSellAmount != nil {
+		t.RemainingTakerSellAmount = int64(*trade.RemainingTakerSellAmount)
 	}
 
-	if trade["remainingTakerSellAmount"] != nil {
-		t.RemainingTakerSellAmount = int64(trade["remainingTakerSellAmount"].(float64))
+	if trade.RemainingMakerSellAmount != nil {
+		t.RemainingMakerSellAmount = int64(*trade.RemainingMakerSellAmount)
 	}
 
-	if trade["remainingMakerSellAmount"] != nil {
-		t.RemainingMakerSellAmount = int64(trade["remainingMakerSellAmount"].(float64))
-	}
-
-	if trade["createdAt"] != nil {
-		tm, _ := time.Parse(time.RFC3339Nano, trade["createdAt"].(string))
+	if trade.CreatedAt != nil {
+		tm, _ := time.Parse(time.RFC3339Nano, *trade.CreatedAt)
 		t.CreatedAt = tm
 	}
 
-	if trade["makerSide"] != nil {
-		t.MakerSide = trade["makerSide"].(string)
+	if trade.MakerSide != nil {
+		t.MakerSide = *trade.MakerSide
 	}
 
 	return nil

@@ -140,49 +140,58 @@ func (a *Account) MarshalJSON() ([]byte, error) {
 }
 
 func (a *Account) UnmarshalJSON(b []byte) error {
-	account := map[string]interface{}{}
+	var account struct {
+		ID            *string `json:"id"`
+		Address       *string `json:"address"`
+		TokenBalances map[string]*struct {
+			Asset          *string  `json:"asset"`
+			Symbol         *string  `json:"symbol"`
+			Balance        *float64 `json:"balance"`
+			LockedBalance  *float64 `json:"lockedBalance"`
+			PendingBalance *float64 `json:"pendingBalance"`
+		} `json:"tokenBalances"`
+	}
+
 	err := json.Unmarshal(b, &account)
 	if err != nil {
 		return err
 	}
 
-	if account["id"] != nil && bson.IsObjectIdHex(account["id"].(string)) {
-		a.ID = bson.ObjectIdHex(account["id"].(string))
+	if account.ID != nil && bson.IsObjectIdHex(*account.ID) {
+		a.ID = bson.ObjectIdHex(*account.ID)
 	}
 
-	if account["address"] != nil {
-		a.Address = account["address"].(string)
+	if account.Address != nil {
+		a.Address = *account.Address
 	}
 
-	if account["tokenBalances"] != nil {
-		tokenBalances := account["tokenBalances"].(map[string]interface{})
+	if account.TokenBalances != nil {
 		a.TokenBalances = make(map[string]*TokenBalance)
-		for asset, balance := range tokenBalances {
-			if !isValidAsset(asset) {
+		for asset, balance := range account.TokenBalances {
+			if !isValidAsset(asset) || balance == nil {
 				continue
 			}
 
-			tokenBalance := balance.(map[string]interface{})
 			tb := &TokenBalance{}
 
-			if tokenBalance["asset"] != nil && isValidAsset(tokenBalance["asset"].(string)) {
-				tb.Asset = tokenBalance["asset"].(string)
+			if balance.Asset != nil && isValidAsset(*balance.Asset) {
+				tb.Asset = *balance.Asset
 			}
 
-			if tokenBalance["symbol"] != nil {
-				tb.Symbol = tokenBalance["symbol"].(string)
+			if balance.Symbol != nil {
+				tb.Symbol = *balance.Symbol
 			}
 
-			if tokenBalance["balance"] != nil {
-				tb.Balance = int64(tokenBalance["balance"].(float64))
+			if balance.Balance != nil {
+				tb.Balance = int64(*balance.Balance)
 			}
 
-			if tokenBalance["lockedBalance"] != nil {
-				tb.LockedBalance = int64(tokenBalance["lockedBalance"].(float64))
+			if balance.LockedBalance != nil {
+				tb.LockedBalance = int64(*balance.LockedBalance)
 			}
 
-			if tokenBalance["pendingBalance"] != nil {
-				tb.PendingBalance = int64(tokenBalance["pendingBalance"].(float64))
+			if balance.PendingBalance != nil {
+				tb.PendingBalance = int64(*balance.PendingBalance)
 			}
 
 			a.TokenBalances[asset] = tb

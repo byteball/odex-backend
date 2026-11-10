@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
@@ -65,53 +66,68 @@ func (t *Token) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Token) UnmarshalJSON(b []byte) error {
-	token := map[string]interface{}{}
+	var token struct {
+		ID        *string  `json:"id"`
+		Symbol    *string  `json:"symbol"`
+		Asset     *string  `json:"asset"`
+		Decimals  *float64 `json:"decimals"`
+		Active    *bool    `json:"active"`
+		Listed    *bool    `json:"listed"`
+		Quote     *bool    `json:"quote"`
+		Rank      *float64 `json:"rank"`
+		CreatedAt *string  `json:"createdAt"`
+		UpdatedAt *string  `json:"updatedAt"`
+	}
 
+	// type mismatches are returned as errors rather than panicking
 	err := json.Unmarshal(b, &token)
 	if err != nil {
 		return err
 	}
 
-	if token["asset"] != nil {
-		t.Asset = token["asset"].(string)
+	if token.Asset != nil {
+		t.Asset = *token.Asset
 	}
 
-	if token["listed"] != nil {
-		t.Listed = token["listed"].(bool)
+	if token.Listed != nil {
+		t.Listed = *token.Listed
 	}
 
-	if token["quote"] != nil {
-		t.Quote = token["quote"].(bool)
+	if token.Quote != nil {
+		t.Quote = *token.Quote
 	}
 
-	if token["active"] != nil {
-		t.Active = token["active"].(bool)
+	if token.Active != nil {
+		t.Active = *token.Active
 	}
 
-	if token["decimals"] != nil {
-		t.Decimals = int(token["decimals"].(float64))
+	if token.Decimals != nil {
+		t.Decimals = int(*token.Decimals)
 	}
 
-	if token["symbol"] != nil {
-		t.Symbol = token["symbol"].(string)
+	if token.Symbol != nil {
+		t.Symbol = *token.Symbol
 	}
 
-	if token["id"] != nil && token["id"].(string) != "" {
-		t.ID = bson.ObjectIdHex(token["id"].(string))
+	if token.ID != nil && *token.ID != "" {
+		if !bson.IsObjectIdHex(*token.ID) {
+			return errors.New("invalid token id")
+		}
+		t.ID = bson.ObjectIdHex(*token.ID)
 	}
 
-	if token["createdAt"] != nil {
-		tm, _ := time.Parse(time.RFC3339Nano, token["createdAt"].(string))
+	if token.CreatedAt != nil {
+		tm, _ := time.Parse(time.RFC3339Nano, *token.CreatedAt)
 		t.CreatedAt = tm
 	}
 
-	if token["updatedAt"] != nil {
-		tm, _ := time.Parse(time.RFC3339Nano, token["updatedAt"].(string))
+	if token.UpdatedAt != nil {
+		tm, _ := time.Parse(time.RFC3339Nano, *token.UpdatedAt)
 		t.UpdatedAt = tm
 	}
 
-	if token["rank"] != nil {
-		t.Rank = int(token["rank"].(float64))
+	if token.Rank != nil {
+		t.Rank = int(*token.Rank)
 	}
 
 	return nil

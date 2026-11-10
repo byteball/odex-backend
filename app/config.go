@@ -84,32 +84,32 @@ func LoadConfig(configPath string, env string) error {
 
 	//General Configuration
 	Config.Env = env
-	Config.ServerPort = v.Get("SERVER_PORT").(int)
+	Config.ServerPort = v.GetInt("SERVER_PORT")
 	Config.ErrorFile = "config/errors.yaml"
 
 	//RabbitMQ Configuration
-	Config.RabbitMQURL = v.Get("RABBITMQ_URL").(string)
+	Config.RabbitMQURL = v.GetString("RABBITMQ_URL")
 
 	//Mongo Configuration
-	Config.MongoURL = v.Get("MONGODB_URL").(string)
-	Config.DBName = v.Get("MONGODB_DBNAME").(string)
+	Config.MongoURL = v.GetString("MONGODB_URL")
+	Config.DBName = v.GetString("MONGODB_DBNAME")
 
 	//TLS/SSL Configuration
-	tlsEnabled := v.Get("ENABLE_TLS").(string)
+	tlsEnabled := v.GetString("ENABLE_TLS")
 	if tlsEnabled == "true" {
 		Config.EnableTLS = true
-		Config.ServerCACert = v.Get("MATCHING_ENGINE_CA_CERT").(string)
-		Config.ServerCert = v.Get("MATCHING_ENGINE_SERVER_CERT").(string)
-		Config.ServerKey = v.Get("MATCHING_ENGINE_SERVER_KEY").(string)
-		Config.RabbitMQKey = v.Get("RABBITMQ_CLIENT_KEY").(string)
-		Config.RabbitMQCert = v.Get("RABBITMQ_CLIENT_CERT").(string)
-		Config.MongoDBUsername = v.Get("MONGODB_USERNAME").(string)
-		Config.MongoDBPassword = v.Get("MONGODB_PASSWORD").(string)
-		Config.RabbitMQUsername = v.Get("RABBITMQ_USERNAME").(string)
-		Config.MongoDBShardURL1 = v.Get("MONGODB_SHARD_URL_1").(string)
-		Config.RabbitMQPassword = v.Get("RABBITMQ_PASSWORD").(string)
-		Config.MongoDBShardURL2 = v.Get("MONGODB_SHARD_URL_2").(string)
-		Config.MongoDBShardURL3 = v.Get("MONGODB_SHARD_URL_3").(string)
+		Config.ServerCACert = v.GetString("MATCHING_ENGINE_CA_CERT")
+		Config.ServerCert = v.GetString("MATCHING_ENGINE_SERVER_CERT")
+		Config.ServerKey = v.GetString("MATCHING_ENGINE_SERVER_KEY")
+		Config.RabbitMQKey = v.GetString("RABBITMQ_CLIENT_KEY")
+		Config.RabbitMQCert = v.GetString("RABBITMQ_CLIENT_CERT")
+		Config.MongoDBUsername = v.GetString("MONGODB_USERNAME")
+		Config.MongoDBPassword = v.GetString("MONGODB_PASSWORD")
+		Config.RabbitMQUsername = v.GetString("RABBITMQ_USERNAME")
+		Config.MongoDBShardURL1 = v.GetString("MONGODB_SHARD_URL_1")
+		Config.RabbitMQPassword = v.GetString("RABBITMQ_PASSWORD")
+		Config.MongoDBShardURL2 = v.GetString("MONGODB_SHARD_URL_2")
+		Config.MongoDBShardURL3 = v.GetString("MONGODB_SHARD_URL_3")
 	} else {
 		Config.EnableTLS = false
 		Config.ServerCACert = ""
@@ -127,8 +127,22 @@ func LoadConfig(configPath string, env string) error {
 	}
 
 	Config.Obyte = make(map[string]string)
-	Config.Obyte["http_url"] = v.Get("OBYTE_NODE_HTTP_URL").(string)
-	Config.Obyte["ws_url"] = v.Get("OBYTE_NODE_WS_URL").(string)
+	Config.Obyte["http_url"] = v.GetString("OBYTE_NODE_HTTP_URL")
+	Config.Obyte["ws_url"] = v.GetString("OBYTE_NODE_WS_URL")
+
+	required := map[string]string{
+		"SERVER_PORT":         fmt.Sprint(Config.ServerPort),
+		"RABBITMQ_URL":        Config.RabbitMQURL,
+		"MONGODB_URL":         Config.MongoURL,
+		"MONGODB_DBNAME":      Config.DBName,
+		"OBYTE_NODE_HTTP_URL": Config.Obyte["http_url"],
+		"OBYTE_NODE_WS_URL":   Config.Obyte["ws_url"],
+	}
+	for name, value := range required {
+		if value == "" || value == "0" {
+			return fmt.Errorf("Missing required configuration value: %s", name)
+		}
+	}
 
 	logger.Infof("Server port: %v", Config.ServerPort)
 	logger.Infof("Obyte node HTTP url: %v", Config.Obyte["http_url"])

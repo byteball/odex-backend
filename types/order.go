@@ -164,6 +164,55 @@ func (o *Order) RemainingQuoteAmount() int64 {
 	}
 }
 
+// ValidateOriginalOrder checks that the signed message has the fields and types
+// that SellAmount, OriginalPrice, MatcherFeeRate and TotalRequiredSellAmount rely on.
+func (o *Order) ValidateOriginalOrder() error {
+	msg, ok := o.OriginalOrder["signed_message"].(map[string]interface{})
+	if !ok {
+		return errors.New("originalOrder.signed_message is missing or invalid")
+	}
+
+	for _, key := range []string{"sell_amount", "price", "matcher_fee"} {
+		if _, ok := msg[key].(float64); !ok {
+			return fmt.Errorf("originalOrder.signed_message.%s is missing or not a number", key)
+		}
+	}
+
+	for _, key := range []string{"sell_asset", "buy_asset", "matcher_fee_asset"} {
+		if _, ok := msg[key].(string); !ok {
+			return fmt.Errorf("originalOrder.signed_message.%s is missing or not a string", key)
+		}
+	}
+
+	sellAmount := msg["sell_amount"].(float64)
+	if sellAmount <= 0 || msg["price"].(float64) <= 0 {
+		return errors.New("originalOrder.signed_message sell_amount and price should be strictly positive")
+	}
+
+	feeAsset := msg["matcher_fee_asset"].(string)
+	if feeAsset != msg["sell_asset"].(string) && feeAsset != msg["buy_asset"].(string) {
+		return errors.New("matcher fee asset is not a pair asset")
+	}
+
+	if o.Side == "SELL" && int64(sellAmount) != o.Amount {
+		return errors.New("sell amount and amount mismatch")
+	}
+
+	authors, ok := o.OriginalOrder["authors"].([]interface{})
+	if !ok || len(authors) == 0 {
+		return errors.New("originalOrder.authors is missing or empty")
+	}
+	author, ok := authors[0].(map[string]interface{})
+	if !ok {
+		return errors.New("originalOrder.authors[0] is invalid")
+	}
+	if _, ok := author["address"].(string); !ok {
+		return errors.New("originalOrder.authors[0].address is missing or not a string")
+	}
+
+	return nil
+}
+
 // SellAmount
 // If order is a "BUY", then sellToken = quoteToken
 func (o *Order) SellAmount(p *Pair) int64 {
@@ -188,9 +237,9 @@ func (o *Order) OriginalPrice() float64 {
 
 func (o *Order) MatcherFeeRate() float64 {
 	OriginalOrderData := o.OriginalOrder["signed_message"].(map[string]interface{})
-	if (OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["sell_asset"].(string)){
+	if OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["sell_asset"].(string) {
 		return OriginalOrderData["matcher_fee"].(float64) / OriginalOrderData["sell_amount"].(float64)
-	} else if (OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["buy_asset"].(string)){
+	} else if OriginalOrderData["matcher_fee_asset"].(string) == OriginalOrderData["buy_asset"].(string) {
 		return OriginalOrderData["matcher_fee"].(float64) / (OriginalOrderData["sell_amount"].(float64) * OriginalOrderData["price"].(float64))
 	} else {
 		panic("matcher fee asset not a pair asset")
@@ -330,51 +379,69 @@ func (o *Order) MarshalJSON() ([]byte, error) {
 }
 
 func (o *Order) UnmarshalJSON(b []byte) error {
-	order := map[string]interface{}{}
+	var order struct {
+		ID                  *string                `json:"id"`
+		PairName            *string                `json:"pairName"`
+		MatcherAddress      *string                `json:"matcherAddress"`
+		AffiliateAddress    *string                `json:"affiliateAddress"`
+		UserAddress         *string                `json:"userAddress"`
+		BaseToken           *string                `json:"baseToken"`
+		QuoteToken          *string                `json:"quoteToken"`
+		Price               *float64               `json:"price"`
+		Amount              interface{}            `json:"amount"`
+		FilledAmount        *float64               `json:"filledAmount"`
+		RemainingSellAmount *float64               `json:"remainingSellAmount"`
+		Hash                *string                `json:"hash"`
+		Side                *string                `json:"side"`
+		Status              *string                `json:"status"`
+		OriginalOrder       map[string]interface{} `json:"originalOrder"`
+		CreatedAt           *string                `json:"createdAt"`
+		UpdatedAt           *string                `json:"updatedAt"`
+	}
 
 	err := json.Unmarshal(b, &order)
 	if err != nil {
 		return err
 	}
 
-	if order["id"] != nil && bson.IsObjectIdHex(order["id"].(string)) {
-		o.ID = bson.ObjectIdHex(order["id"].(string))
+	if order.ID != nil && bson.IsObjectIdHex(*order.ID) {
+		o.ID = bson.ObjectIdHex(*order.ID)
 	}
 
-	if order["pairName"] != nil {
-		o.PairName = order["pairName"].(string)
+	if order.PairName != nil {
+		o.PairName = *order.PairName
 	}
 
-	if order["matcherAddress"] != nil {
-		o.MatcherAddress = order["matcherAddress"].(string)
+	if order.MatcherAddress != nil {
+		o.MatcherAddress = *order.MatcherAddress
 	}
 
-	if order["affiliateAddress"] != nil {
-		o.AffiliateAddress = order["affiliateAddress"].(string)
+	if order.AffiliateAddress != nil {
+		o.AffiliateAddress = *order.AffiliateAddress
 	}
 
-	if order["userAddress"] != nil {
-		o.UserAddress = order["userAddress"].(string)
+	if order.UserAddress != nil {
+		o.UserAddress = *order.UserAddress
 	}
 
-	if order["baseToken"] != nil {
-		o.BaseToken = order["baseToken"].(string)
+	if order.BaseToken != nil {
+		o.BaseToken = *order.BaseToken
 	}
 
-	if order["quoteToken"] != nil {
-		o.QuoteToken = order["quoteToken"].(string)
+	if order.QuoteToken != nil {
+		o.QuoteToken = *order.QuoteToken
 	}
 
-	if order["price"] != 0 {
-		o.Price = order["price"].(float64) // FIX!!!
+	if order.Price != nil {
+		o.Price = *order.Price
 	}
 
-	if order["amount"] != nil {
-		switch order["amount"].(type) {
+	if order.Amount != nil {
+		switch amount := order.Amount.(type) {
 		case float64:
-			o.Amount = int64(order["amount"].(float64))
+			o.Amount = int64(amount)
 		case string:
-			o.Amount, err = strconv.ParseInt(order["amount"].(string), 10, 64)
+			o.Amount, err = strconv.ParseInt(amount, 10, 64)
 			if err != nil {
 				return errors.New("failed to parse amount")
 			}
@@ -383,37 +450,37 @@ func (o *Order) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	if order["filledAmount"] != nil {
-		o.FilledAmount = int64(order["filledAmount"].(float64))
+	if order.FilledAmount != nil {
+		o.FilledAmount = int64(*order.FilledAmount)
 	}
 
-	if order["remainingSellAmount"] != nil {
-		o.RemainingSellAmount = int64(order["remainingSellAmount"].(float64))
+	if order.RemainingSellAmount != nil {
+		o.RemainingSellAmount = int64(*order.RemainingSellAmount)
 	}
 
-	if order["hash"] != nil {
-		o.Hash = order["hash"].(string)
+	if order.Hash != nil {
+		o.Hash = *order.Hash
 	}
 
-	if order["side"] != nil {
-		o.Side = order["side"].(string)
+	if order.Side != nil {
+		o.Side = *order.Side
 	}
 
-	if order["status"] != nil {
-		o.Status = order["status"].(string)
+	if order.Status != nil {
+		o.Status = *order.Status
 	}
 
-	if order["originalOrder"] != nil {
-		o.OriginalOrder = order["originalOrder"].(map[string]interface{})
+	if order.OriginalOrder != nil {
+		o.OriginalOrder = order.OriginalOrder
 	}
 
-	if order["createdAt"] != nil {
-		t, _ := time.Parse(time.RFC3339Nano, order["createdAt"].(string))
+	if order.CreatedAt != nil {
+		t, _ := time.Parse(time.RFC3339Nano, *order.CreatedAt)
 		o.CreatedAt = t
 	}
 
-	if order["updatedAt"] != nil {
-		t, _ := time.Parse(time.RFC3339Nano, order["updatedAt"].(string))
+	if order.UpdatedAt != nil {
+		t, _ := time.Parse(time.RFC3339Nano, *order.UpdatedAt)
 		o.UpdatedAt = t
 	}
 
@@ -621,32 +688,40 @@ func (o *OrderData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON creates a trade object from a json byte string
 func (o *OrderData) UnmarshalJSON(b []byte) error {
-	orderData := map[string]interface{}{}
-	err := json.Unmarshal(b, &orderData)
+	var orderData struct {
+		Pair *struct {
+			PairName   string `json:"pairName"`
+			BaseToken  string `json:"baseToken"`
+			QuoteToken string `json:"quoteToken"`
+		} `json:"pair"`
+		OrderVolume *float64 `json:"orderVolume"`
+		OrderCount  *float64 `json:"orderCount"`
+		BestPrice   *float64 `json:"bestPrice"`
+	}
 
+	err := json.Unmarshal(b, &orderData)
 	if err != nil {
 		return err
 	}
 
-	if orderData["pair"] != nil {
-		pair := orderData["pair"].(map[string]interface{})
+	if orderData.Pair != nil {
 		o.Pair = PairID{
-			PairName:   pair["pairName"].(string),
-			BaseToken:  pair["baseToken"].(string),
-			QuoteToken: pair["quoteToken"].(string),
+			PairName:   orderData.Pair.PairName,
+			BaseToken:  orderData.Pair.BaseToken,
+			QuoteToken: orderData.Pair.QuoteToken,
 		}
 	}
 
-	if orderData["orderVolume"] != nil {
-		o.OrderVolume = int64(orderData["orderVolume"].(float64))
+	if orderData.OrderVolume != nil {
+		o.OrderVolume = int64(*orderData.OrderVolume)
 	}
 
-	if orderData["orderCount"] != nil {
-		o.OrderCount = int64(orderData["orderCount"].(float64))
+	if orderData.OrderCount != nil {
+		o.OrderCount = int64(*orderData.OrderCount)
 	}
 
-	if orderData["bestPrice"] != nil {
-		o.BestPrice = orderData["bestPrice"].(float64) // FIX
+	if orderData.BestPrice != nil {
+		o.BestPrice = *orderData.BestPrice
 	}
 
 	return nil

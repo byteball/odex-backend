@@ -26,39 +26,47 @@ type Pair struct {
 }
 
 func (p *Pair) UnmarshalJSON(b []byte) error {
-	pair := map[string]interface{}{}
+	var pair struct {
+		BaseAsset          *string  `json:"baseAsset"`
+		QuoteAsset         *string  `json:"quoteAsset"`
+		BaseTokenSymbol    *string  `json:"baseTokenSymbol"`
+		QuoteTokenSymbol   *string  `json:"quoteTokenSymbol"`
+		BaseTokenDecimals  *float64 `json:"baseTokenDecimals"`
+		QuoteTokenDecimals *float64 `json:"quoteTokenDecimals"`
+		Rank               *float64 `json:"rank"`
+	}
 
 	err := json.Unmarshal(b, &pair)
 	if err != nil {
 		return err
 	}
 
-	if pair["baseAsset"] != nil {
-		p.BaseAsset = pair["baseAsset"].(string)
+	if pair.BaseAsset != nil {
+		p.BaseAsset = *pair.BaseAsset
 	}
 
-	if pair["quoteAsset"] != nil {
-		p.QuoteAsset = pair["quoteAsset"].(string)
+	if pair.QuoteAsset != nil {
+		p.QuoteAsset = *pair.QuoteAsset
 	}
 
-	if pair["baseTokenSymbol"] != nil {
-		p.BaseTokenSymbol = pair["baseTokenSymbol"].(string)
+	if pair.BaseTokenSymbol != nil {
+		p.BaseTokenSymbol = *pair.BaseTokenSymbol
 	}
 
-	if pair["quoteTokenSymbol"] != nil {
-		p.QuoteTokenSymbol = pair["quoteTokenSymbol"].(string)
+	if pair.QuoteTokenSymbol != nil {
+		p.QuoteTokenSymbol = *pair.QuoteTokenSymbol
 	}
 
-	if pair["baseTokenDecimals"] != nil {
-		p.BaseTokenDecimals = int(pair["baseTokenDecimals"].(float64))
+	if pair.BaseTokenDecimals != nil {
+		p.BaseTokenDecimals = int(*pair.BaseTokenDecimals)
 	}
 
-	if pair["quoteTokenDecimals"] != nil {
-		p.QuoteTokenDecimals = int(pair["quoteTokenDecimals"].(float64))
+	if pair.QuoteTokenDecimals != nil {
+		p.QuoteTokenDecimals = int(*pair.QuoteTokenDecimals)
 	}
 
-	if pair["rank"] != nil {
-		p.Rank = int(pair["rank"].(float64))
+	if pair.Rank != nil {
+		p.Rank = int(*pair.Rank)
 	}
 
 	return nil

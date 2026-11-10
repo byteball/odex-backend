@@ -138,6 +138,11 @@ func (s *OrderService) NewOrder(o *types.Order) (e error) {
 		return err
 	}
 
+	if err := o.ValidateOriginalOrder(); err != nil {
+		logger.Error(err)
+		return err
+	}
+
 	if err := s.validator.ValidateOperatorAddress(o); err != nil {
 		logger.Error(err)
 		return err
@@ -282,6 +287,11 @@ func (s *OrderService) GetSenderAddresses(oc *types.OrderCancel) (string, string
 	}
 
 	authors := cast.ToSlice(o.OriginalOrder["authors"])
+	if len(authors) == 0 {
+		err = errors.New("order has no authors: " + oc.OrderHash)
+		logger.Error(err)
+		return "", "", err
+	}
 	author := cast.ToStringMapString(authors[0])
 	signer := author["address"]
 

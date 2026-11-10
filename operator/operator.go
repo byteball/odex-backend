@@ -124,15 +124,27 @@ func (op *Operator) HandleEvents() error {
 		select {
 		case event := <-events:
 			logger.Info("Receiving event from wallet", utils.JSON(event))
-			arrData := event["data"].([]interface{})
-			data := arrData[0].(map[string]interface{})
+			arrData, ok := event["data"].([]interface{})
+			if !ok || len(arrData) == 0 {
+				logger.Error("malformed event data")
+				continue
+			}
+			data, ok := arrData[0].(map[string]interface{})
+			if !ok {
+				logger.Error("malformed event data")
+				continue
+			}
 
 			switch event["event"] {
 
 			case "loggedin":
 				logger.Info("Loggedin event", utils.JSON(data))
-				sessionId := data["sessionId"].(string)
-				address := data["address"].(string)
+				sessionId := cast.ToString(data["sessionId"])
+				address := cast.ToString(data["address"])
+				if sessionId == "" || address == "" {
+					logger.Error("loggedin event without sessionId or address")
+					break
+				}
 				logger.Info("Logged in", sessionId, address)
 				go ws.GetLoginSocket().SendMessageBySession(sessionId, address)
 				ws.GetLoginSocket().LinkAddressToClient(sessionId, address)
@@ -222,15 +234,23 @@ func (op *Operator) HandleEvents() error {
 
 			case "revoke":
 				logger.Info("revoke event", utils.JSON(data))
-				userAddress := data["userAddress"].(string)
-				signerAddress := data["signerAddress"].(string)
+				userAddress := cast.ToString(data["userAddress"])
+				signerAddress := cast.ToString(data["signerAddress"])
+				if userAddress == "" || signerAddress == "" {
+					logger.Error("revoke event without userAddress or signerAddress")
+					break
+				}
 				logger.Info("revoke authorization on owner", userAddress, "from signer", signerAddress)
 				op.OrderService.CancelOrdersSignedByRevokedSigner(userAddress, signerAddress)
 
 			case "balances_update":
 				//logger.Info("balances update event", utils.JSON(data))
-				address := data["address"].(string)
-				ev := data["event"].(string)
+				address := cast.ToString(data["address"])
+				ev := cast.ToString(data["event"])
+				if address == "" {
+					logger.Error("balances_update event without address")
+					break
+				}
 				balances_by_symbol := cast.ToStringMapInt64(data["balances_by_symbol"])
 				balances_by_asset := cast.ToStringMapInt64(data["balances_by_asset"])
 				//logger.Info(address, balances_by_symbol)
@@ -240,21 +260,22 @@ func (op *Operator) HandleEvents() error {
 				go ws.SendBalancesMessage("UPDATE", address, balances_by_symbol, ev)
 
 			case "exchange_response":
-				if data["trigger_unit"] == nil {
+				trigger_unit, ok := data["trigger_unit"].(string)
+				if !ok || trigger_unit == "" {
 					logger.Error("no trigger unit")
 					break
 				}
-				trigger_unit := data["trigger_unit"].(string)
 				bounced := false
-				switch data["bounced"].(type) {
+				switch b := data["bounced"].(type) {
 				case float64:
-					bounced = (int(data["bounced"].(float64)) == 1)
+					bounced = (int(b) == 1)
 				case bool:
-					bounced = data["bounced"].(bool)
+					bounced = b
 				default:
-					panic("unrecognized type of bounced")
+					logger.Error("unrecognized type of bounced")
+					continue
 				}
-				response := data["response"].(map[string]interface{})
+				response := cast.ToStringMap(data["response"])
 
 				trades, err := op.TradeService.GetByTriggerUnitHash(trigger_unit)
 				if err != nil {
@@ -287,7 +308,7 @@ func (op *Operator) HandleEvents() error {
 				}
 
 				if bounced {
-					bounceMessage := response["error"].(map[string]interface{})["message"].(string)
+					bounceMessage := cast.ToString(cast.ToStringMap(response["error"])["message"])
 					op.HandleTxError(matches, bounceMessage) // will also update status to REJECTED
 					// the wallet sends balance updates only after successful trades
 					go op.sendBalancesUpdateAfterTrade(makerOrder.UserAddress)
