@@ -1,28 +1,22 @@
 package daos
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils/testutils"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func init() {
-	server := testutils.NewDBTestServer()
-	temp, _ := ioutil.TempDir("", "test")
-	server.SetPath(temp)
-
-	session := server.Session()
-	db = &Database{session}
+	db = &Database{Session: testutils.NewDBTestClient()}
 }
 
 func TestPairDao(t *testing.T) {
 	dao := NewPairDao()
 
 	pair := &types.Pair{
-		ID:               bson.NewObjectId(),
+		ID:               bson.NewObjectID(),
 		BaseTokenSymbol:  "REQ",
 		BaseAsset:        "0xcf7389dc6c63637598402907d5431160ec8972a5",
 		QuoteTokenSymbol: "WETH",

@@ -8,12 +8,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Trade struct holds arguments corresponding to a "Taker Order"
 type Trade struct {
-	ID                       bson.ObjectId `json:"id,omitempty" bson:"_id"`
+	ID                       bson.ObjectID `json:"id,omitempty" bson:"_id"`
 	Taker                    string        `json:"taker" bson:"taker"`
 	Maker                    string        `json:"maker" bson:"maker"`
 	BaseToken                string        `json:"baseToken" bson:"baseToken"`
@@ -35,7 +35,7 @@ type Trade struct {
 }
 
 type TradeRecord struct {
-	ID                       bson.ObjectId `json:"id" bson:"_id"`
+	ID                       bson.ObjectID `json:"id" bson:"_id"`
 	Taker                    string        `json:"taker" bson:"taker"`
 	Maker                    string        `json:"maker" bson:"maker"`
 	BaseToken                string        `json:"baseToken" bson:"baseToken"`
@@ -232,8 +232,10 @@ func (t *Trade) UnmarshalJSON(b []byte) error {
 	}
 	t.Taker = *trade.Taker
 
-	if trade.ID != nil && bson.IsObjectIdHex(*trade.ID) {
-		t.ID = bson.ObjectIdHex(*trade.ID)
+	if trade.ID != nil {
+		if id, err := bson.ObjectIDFromHex(*trade.ID); err == nil {
+			t.ID = id
+		}
 	}
 
 	if trade.TxHash != nil {
@@ -285,7 +287,7 @@ func (t *Trade) CalcQuoteAmount() int64 {
 	return int64(math.Round(float64(t.Amount) * t.Price))
 }
 
-func (t *Trade) GetBSON() (interface{}, error) {
+func (t *Trade) MarshalBSON() ([]byte, error) {
 	tr := TradeRecord{
 		ID:                       t.ID,
 		PairName:                 t.PairName,
@@ -308,12 +310,12 @@ func (t *Trade) GetBSON() (interface{}, error) {
 		MakerSide:                t.MakerSide,
 	}
 
-	return tr, nil
+	return bson.Marshal(tr)
 }
 
-func (t *Trade) SetBSON(raw bson.Raw) error {
+func (t *Trade) UnmarshalBSON(data []byte) error {
 	decoded := new(struct {
-		ID                       bson.ObjectId `json:"id,omitempty" bson:"_id"`
+		ID                       bson.ObjectID `json:"id,omitempty" bson:"_id"`
 		PairName                 string        `json:"pairName" bson:"pairName"`
 		Taker                    string        `json:"taker" bson:"taker"`
 		Maker                    string        `json:"maker" bson:"maker"`
@@ -334,7 +336,7 @@ func (t *Trade) SetBSON(raw bson.Raw) error {
 		MakerSide                string        `json:"makerSide" bson:"makerSide"`
 	})
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}
@@ -391,7 +393,7 @@ type TradeBSONUpdate struct {
 	*Trade
 }
 
-func (t TradeBSONUpdate) GetBSON() (interface{}, error) {
+func (t TradeBSONUpdate) MarshalBSON() ([]byte, error) {
 	now := time.Now()
 
 	set := bson.M{
@@ -422,7 +424,7 @@ func (t TradeBSONUpdate) GetBSON() (interface{}, error) {
 	}
 
 	setOnInsert := bson.M{
-		"_id":       bson.NewObjectId(),
+		"_id":       bson.NewObjectID(),
 		"hash":      t.Hash,
 		"createdAt": now,
 	}
@@ -432,5 +434,5 @@ func (t TradeBSONUpdate) GetBSON() (interface{}, error) {
 		"$setOnInsert": setOnInsert,
 	}
 
-	return update, nil
+	return bson.Marshal(update)
 }

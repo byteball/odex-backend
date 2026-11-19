@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestBaseTokenSymbol(t *testing.T) {
 	o := &Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -34,7 +35,7 @@ func TestBaseTokenSymbol(t *testing.T) {
 
 func TestQuoteTokenSymbol(t *testing.T) {
 	o := &Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -56,7 +57,7 @@ func TestQuoteTokenSymbol(t *testing.T) {
 func TestOrderMarshal(t *testing.T) {
 
 	o := &Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -107,7 +108,7 @@ func TestOrderMarshal(t *testing.T) {
 
 func TestOrderUnmarshal(t *testing.T) {
 	expected := Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x14d281013d8ee8ccfa0eca87524e5b3cfa6152ba",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		QuoteToken:     "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -150,7 +151,7 @@ func TestOrderUnmarshal(t *testing.T) {
 
 func TestOrderBSON(t *testing.T) {
 	order := &Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -188,7 +189,7 @@ func TestOrderBSON(t *testing.T) {
 // 	tokenAddress2 := NewAddressFromString("0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa")
 
 // 	tokenBalance1 := &TokenBalance{
-// 		ID:       bson.NewObjectId(),
+// 		ID:       bson.NewObjectID(),
 // 		Address:  tokenAddress1,
 // 		Symbol:   "EOS",
 // 		Balance:       NewBigInt("10000"),
@@ -197,7 +198,7 @@ func TestOrderBSON(t *testing.T) {
 // 	}
 
 // 	tokenBalance2 := &TokenBalance{
-// 		ID:       bson.NewObjectId(),
+// 		ID:       bson.NewObjectID(),
 // 		Address:  tokenAddress2,
 // 		Symbol:   "ZRX",
 // 		Balance:       NewBigInt("10000"),
@@ -206,7 +207,7 @@ func TestOrderBSON(t *testing.T) {
 // 	}
 
 // 	account := &Account{
-// 		ID:      bson.NewObjectId(),
+// 		ID:      bson.NewObjectID(),
 // 		Address: address,
 // 		TokenBalances: map[common.Address]*TokenBalance{
 // 			tokenAddress1: tokenBalance1,

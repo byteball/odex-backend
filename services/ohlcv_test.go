@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -12,8 +13,8 @@ import (
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/daos"
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const timeLayoutString = "Jan 2 2006 15:04:05"
@@ -98,7 +99,6 @@ func TestOHLCV(t *testing.T) {
 		Amount: 125772,
 		Status: "SUCCESS",
 	}
-	app.Config.DBName = "odex"
 	tradeDao := daos.NewTradeDao()
 	ohlcvService := NewOHLCVService(tradeDao)
 
@@ -111,10 +111,10 @@ func TestOHLCV(t *testing.T) {
 		sampleTrade.Amount = sampleTrade.Amount + 10
 		sampleTrade.Price = sampleTrade.Price + 5
 		sampleTrade.MakerOrderHash = sampleTrade.MakerOrderHash + "5"
-		sampleTrade.ID = bson.NewObjectId()
+		sampleTrade.ID = bson.NewObjectID()
 		sampleTrade.Hash = sampleTrade.ComputeHash()
 
-		if err := db.DB(app.Config.DBName).C("trades").Insert(&sampleTrade); err != nil {
+		if _, err := db.Database(app.Config.DBName).Collection("trades").InsertOne(context.Background(), &sampleTrade); err != nil {
 			panic(err)
 		}
 

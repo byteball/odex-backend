@@ -1,22 +1,16 @@
 package daos
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/byteball/odex-backend/types"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/byteball/odex-backend/utils/testutils"
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
 )
 
 func init() {
-	server := testutils.NewDBTestServer()
-	temp, _ := ioutil.TempDir("", "test")
-	server.SetPath(temp)
-
-	session := server.Session()
-	db = &Database{Session: session}
+	db = &Database{Session: testutils.NewDBTestClient()}
 }
 
 func TestTradeDao(t *testing.T) {
@@ -29,7 +23,7 @@ func TestTradeDao(t *testing.T) {
 
 	trs := []*types.Trade{
 		&types.Trade{
-			ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+			ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 			Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 			Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 			BaseToken:      ZRXAddress,
@@ -42,26 +36,26 @@ func TestTradeDao(t *testing.T) {
 			Amount:         100,
 		},
 		&types.Trade{
-			ID:             bson.ObjectIdHex("537f700b537461b70c5f0004"),
+			ID:             utils.MustObjectID("537f700b537461b70c5f0004"),
 			Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 			Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 			BaseToken:      ZRXAddress,
 			QuoteToken:     WETHAddress,
 			TxHash:         "0xb08514795a779381e0982606e7d33892615ede97dc67f567bf6e4b676db9c9c4",
-			Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+			Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880b",
 			MakerOrderHash: "0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff",
 			PairName:       "ZRX/WETH",
 			Price:          10000000,
 			Amount:         100,
 		},
 		&types.Trade{
-			ID:             bson.ObjectIdHex("537f700b537461b70c5f0007"),
+			ID:             utils.MustObjectID("537f700b537461b70c5f0007"),
 			Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 			Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 			BaseToken:      ZRXAddress,
 			QuoteToken:     DAIAddress,
 			TxHash:         "0xf16e0b1ad8536bc43fba0ac009fc19098e19920e045273fa16fa0fc7c83ae1e8",
-			Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880a",
+			Hash:           "0xb9070a2d333403c255ce71ddf6e795053599b2e885321de40353832b96d8880c",
 			MakerOrderHash: "0x6d9ad89548c9e3ce4c97825d027291477f2c44a8caef792095f2cabc978493ff",
 			PairName:       "ZRX/DAI",
 			Price:          10000000,
@@ -112,7 +106,7 @@ func TestUpdateTrade(t *testing.T) {
 	dao.Drop()
 
 	tr := &types.Trade{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",

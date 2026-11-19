@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/byteball/odex-backend/interfaces"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/byteball/odex-backend/types"
 )
@@ -44,7 +44,7 @@ func (s *TokenService) Create(token *types.Token) error {
 }
 
 // GetByID fetches the detailed document of a token using its mongo ID
-func (s *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
+func (s *TokenService) GetByID(id bson.ObjectID) (*types.Token, error) {
 	return s.tokenDao.GetByID(id)
 }
 

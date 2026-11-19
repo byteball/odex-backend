@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestAccountBSON(t *testing.T) {
@@ -29,7 +29,7 @@ func TestAccountBSON(t *testing.T) {
 	}
 
 	account := &Account{
-		ID:      bson.NewObjectId(),
+		ID:      bson.NewObjectID(),
 		Address: address,
 		TokenBalances: map[string]*TokenBalance{
 			asset1: tokenBalance1,

@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	bson "github.com/globalsign/mgo/bson"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -104,11 +104,11 @@ func (_m *AccountDao) GetByAddress(owner string) (*types.Account, error) {
 }
 
 // GetByID provides a mock function with given fields: id
-func (_m *AccountDao) GetByID(id bson.ObjectId) (*types.Account, error) {
+func (_m *AccountDao) GetByID(id bson.ObjectID) (*types.Account, error) {
 	ret := _m.Called(id)
 
 	var r0 *types.Account
-	if rf, ok := ret.Get(0).(func(bson.ObjectId) *types.Account); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID) *types.Account); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
@@ -117,7 +117,7 @@ func (_m *AccountDao) GetByID(id bson.ObjectId) (*types.Account, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
+	if rf, ok := ret.Get(1).(func(bson.ObjectID) error); ok {
 		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)

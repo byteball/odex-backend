@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/json"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Tick is the format in which mongo aggregate pipeline returns data when queried for OHLCV data
@@ -156,7 +156,7 @@ func (t *Tick) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t *Tick) GetBSON() (interface{}, error) {
+func (t *Tick) MarshalBSON() ([]byte, error) {
 	type PairID struct {
 		PairName   string `json:"pairName" bson:"pairName"`
 		BaseToken  string `json:"baseToken" bson:"baseToken"`
@@ -173,7 +173,7 @@ func (t *Tick) GetBSON() (interface{}, error) {
 	v := t.Volume
 	qv := t.QuoteVolume
 
-	return struct {
+	return bson.Marshal(struct {
 		ID          PairID  `json:"id,omitempty" bson:"_id"`
 		Count       int64   `json:"count" bson:"count"`
 		Open        float64 `json:"open" bson:"open"`
@@ -198,10 +198,10 @@ func (t *Tick) GetBSON() (interface{}, error) {
 		QuoteVolume: qv,
 		Count:       count,
 		Timestamp:   t.Timestamp,
-	}, nil
+	})
 }
 
-func (t *Tick) SetBSON(raw bson.Raw) error {
+func (t *Tick) UnmarshalBSON(data []byte) error {
 	type PairIDRecord struct {
 		PairName   string `json:"pairName" bson:"pairName"`
 		BaseToken  string `json:"baseToken" bson:"baseToken"`
@@ -220,7 +220,7 @@ func (t *Tick) SetBSON(raw bson.Raw) error {
 		Timestamp   int64        `json:"timestamp" bson:"timestamp"`
 	})
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}

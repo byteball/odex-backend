@@ -14,7 +14,7 @@ Several matchers can operate exchanges based on ODEX technology at the same time
 
 ## Requirements
 
-- **mongoDB** version 3.6 or newer ([installation instructions for ubuntu](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/))
+- **mongoDB** version 4.4 or newer ([installation instructions for ubuntu](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/))
 - **rabbitmq** version 3.7.7 or newer ([installation instructions for ubuntu](https://computingforgeeks.com/how-to-install-latest-rabbitmq-server-on-ubuntu-18-04-lts/))
 - **golang** latest ([installation instructions for ubuntu](https://github.com/golang/go/wiki/Ubuntu))
 

@@ -5,8 +5,9 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // TokenDao contains:
@@ -21,12 +22,12 @@ type TokenDao struct {
 func NewTokenDao() *TokenDao {
 	dbName := app.Config.DBName
 	collection := "tokens"
-	index := mgo.Index{
-		Key:    []string{"asset"},
-		Unique: true,
+	index := mongo.IndexModel{
+		Keys:    keySpec("asset"),
+		Options: options.Index().SetUnique(true),
 	}
 
-	err := db.Session.DB(dbName).C(collection).EnsureIndex(index)
+	err := db.EnsureIndex(dbName, collection, index)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +41,7 @@ func (dao *TokenDao) Create(token *types.Token) error {
 		return err
 	}
 
-	token.ID = bson.NewObjectId()
+	token.ID = bson.NewObjectID()
 	token.CreatedAt = time.Now()
 	token.UpdatedAt = time.Now()
 
@@ -157,7 +158,7 @@ func (dao *TokenDao) GetUnlistedTokens() ([]types.Token, error) {
 }
 
 // GetByID function fetches details of a token based on its mongo id
-func (dao *TokenDao) GetByID(id bson.ObjectId) (*types.Token, error) {
+func (dao *TokenDao) GetByID(id bson.ObjectID) (*types.Token, error) {
 	var res *types.Token
 	err := db.GetByID(dao.dbName, dao.collectionName, id, &res)
 	if err != nil {

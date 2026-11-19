@@ -5,13 +5,13 @@ import (
 	"math"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Pair struct is used to model the pair data in the system and DB
 type Pair struct {
-	ID                 bson.ObjectId `json:"-" bson:"_id"`
+	ID                 bson.ObjectID `json:"-" bson:"_id"`
 	BaseTokenSymbol    string        `json:"baseTokenSymbol,omitempty" bson:"baseTokenSymbol"`
 	BaseAsset          string        `json:"baseAsset,omitempty" bson:"baseAsset"`
 	BaseTokenDecimals  int           `json:"baseTokenDecimals,omitempty" bson:"baseTokenDecimals"`
@@ -102,7 +102,7 @@ type PairAssetsRecord struct {
 }
 
 type PairRecord struct {
-	ID bson.ObjectId `json:"id" bson:"_id"`
+	ID bson.ObjectID `json:"id" bson:"_id"`
 
 	BaseTokenSymbol    string    `json:"baseTokenSymbol" bson:"baseTokenSymbol"`
 	BaseAsset          string    `json:"baseAsset" bson:"baseAsset"`
@@ -167,10 +167,10 @@ func (p *Pair) MinQuoteAmount() int64 {
 	return 0
 }
 
-func (p *Pair) SetBSON(raw bson.Raw) error {
+func (p *Pair) UnmarshalBSON(data []byte) error {
 	decoded := &PairRecord{}
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}
@@ -191,8 +191,8 @@ func (p *Pair) SetBSON(raw bson.Raw) error {
 	return nil
 }
 
-func (p *Pair) GetBSON() (interface{}, error) {
-	return &PairRecord{
+func (p *Pair) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(&PairRecord{
 		ID:                 p.ID,
 		BaseTokenSymbol:    p.BaseTokenSymbol,
 		BaseAsset:          p.BaseAsset,
@@ -205,7 +205,7 @@ func (p *Pair) GetBSON() (interface{}, error) {
 		Rank:               p.Rank,
 		CreatedAt:          p.CreatedAt,
 		UpdatedAt:          p.UpdatedAt,
-	}, nil
+	})
 }
 
 func (p Pair) ValidateAssets() error {
@@ -331,7 +331,7 @@ func (p *PairData) AssetCode() string {
 	return code
 }
 
-//ToAPIData converts detailed data into public PairAPIData that contains
+// ToAPIData converts detailed data into public PairAPIData that contains
 func (p *PairData) ToSimplifiedAPIData(pair *Pair) *SimplifiedPairAPIData {
 	pairAPIData := SimplifiedPairAPIData{}
 	pairAPIData.PairName = p.Pair.PairName
@@ -390,7 +390,7 @@ type PairAPIData struct {
 	Rank               int     `json:"rank" bson:"rank"`
 }
 
-//PairAPIData is a similar structure to PairData that contains human-readable data for a certain pair
+// PairAPIData is a similar structure to PairData that contains human-readable data for a certain pair
 type SimplifiedPairAPIData struct {
 	PairName           string  `json:"pairName"`
 	LastPrice          float64 `json:"lastPrice"`

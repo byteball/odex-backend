@@ -1,20 +1,24 @@
 package services
 
 import (
+	"os"
+	"testing"
+
 	"github.com/byteball/odex-backend/daos"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/dbtest"
-	"io/ioutil"
+	"github.com/byteball/odex-backend/utils/testutils"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-var server dbtest.DBServer
-var db *mgo.Session
+var db *mongo.Client
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	testutils.DropTestDB()
+	os.Exit(code)
+}
 
 func init() {
-	temp, _ := ioutil.TempDir("", "test")
-	server.SetPath(temp)
-
-	session := server.Session()
+	session := testutils.NewDBTestClient()
 	if _, err := daos.InitSession(session); err != nil {
 		panic(err)
 	}

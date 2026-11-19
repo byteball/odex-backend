@@ -5,13 +5,13 @@ import (
 
 	"encoding/json"
 
-	"github.com/globalsign/mgo/bson"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Account corresponds to a single Obyte address. It contains a list of token balances for that address
 type Account struct {
-	ID            bson.ObjectId            `json:"-" bson:"_id"`
+	ID            bson.ObjectID            `json:"-" bson:"_id"`
 	Address       string                   `json:"address" bson:"address"`
 	TokenBalances map[string]*TokenBalance `json:"tokenBalances" bson:"tokenBalances"`
 	IsBlocked     bool                     `json:"isBlocked" bson:"isBlocked"`
@@ -30,7 +30,7 @@ type TokenBalance struct {
 
 // AccountRecord corresponds to what is stored in the DB.
 type AccountRecord struct {
-	ID            bson.ObjectId                 `json:"id" bson:"_id"`
+	ID            bson.ObjectID                 `json:"id" bson:"_id"`
 	Address       string                        `json:"address" bson:"address"`
 	TokenBalances map[string]TokenBalanceRecord `json:"tokenBalances" bson:"tokenBalances"`
 	IsBlocked     bool                          `json:"isBlocked" bson:"isBlocked"`
@@ -47,8 +47,8 @@ type TokenBalanceRecord struct {
 	LockedBalance  int64  `json:"lockedBalance" bson:"lockedBalance"`
 }
 
-// GetBSON implements bson.Getter
-func (a *Account) GetBSON() (interface{}, error) {
+// MarshalBSON implements bson.Marshaler
+func (a *Account) MarshalBSON() ([]byte, error) {
 	ar := AccountRecord{
 		IsBlocked: a.IsBlocked,
 		Address:   a.Address,
@@ -68,20 +68,20 @@ func (a *Account) GetBSON() (interface{}, error) {
 
 	ar.TokenBalances = tokenBalances
 
-	if a.ID == "" {
-		ar.ID = bson.NewObjectId()
+	if a.ID.IsZero() {
+		ar.ID = bson.NewObjectID()
 	} else {
 		ar.ID = a.ID
 	}
 
-	return ar, nil
+	return bson.Marshal(ar)
 }
 
-// SetBSON implemenets bson.Setter
-func (a *Account) SetBSON(raw bson.Raw) error {
+// UnmarshalBSON implements bson.Unmarshaler
+func (a *Account) UnmarshalBSON(data []byte) error {
 	decoded := &AccountRecord{}
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}
@@ -157,8 +157,10 @@ func (a *Account) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if account.ID != nil && bson.IsObjectIdHex(*account.ID) {
-		a.ID = bson.ObjectIdHex(*account.ID)
+	if account.ID != nil {
+		if id, err := bson.ObjectIDFromHex(*account.ID); err == nil {
+			a.ID = id
+		}
 	}
 
 	if account.Address != nil {
@@ -212,7 +214,7 @@ type AccountBSONUpdate struct {
 	*Account
 }
 
-func (a *AccountBSONUpdate) GetBSON() (interface{}, error) {
+func (a AccountBSONUpdate) MarshalBSON() ([]byte, error) {
 	now := time.Now()
 	tokenBalances := make(map[string]TokenBalanceRecord)
 
@@ -233,7 +235,7 @@ func (a *AccountBSONUpdate) GetBSON() (interface{}, error) {
 	}
 
 	setOnInsert := bson.M{
-		"_id":       bson.NewObjectId(),
+		"_id":       bson.NewObjectID(),
 		"createdAt": now,
 	}
 
@@ -242,7 +244,7 @@ func (a *AccountBSONUpdate) GetBSON() (interface{}, error) {
 		"$setOnInsert": setOnInsert,
 	}
 
-	return update, nil
+	return bson.Marshal(update)
 }
 
 func isValidAsset(asset string) bool {

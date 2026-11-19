@@ -5,8 +5,9 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // TradeDao contains:
@@ -22,98 +23,22 @@ func NewTradeDao() *TradeDao {
 	dbName := app.Config.DBName
 	collection := "trades"
 
-	i1 := mgo.Index{
-		Key: []string{"baseToken"},
+	indexes := []mongo.IndexModel{
+		{Keys: keySpec("baseToken")},
+		{Keys: keySpec("quoteToken")},
+		{Keys: keySpec("createdAt")},
+		{Keys: keySpec("hash"), Options: options.Index().SetSparse(true).SetUnique(true)},
+		{Keys: keySpec("makerOrderHash"), Options: options.Index().SetSparse(true)},
+		{Keys: keySpec("takerOrderHash"), Options: options.Index().SetSparse(true)},
+		{Keys: keySpec("status", "maker")},
+		{Keys: keySpec("status", "taker")},
+		{Keys: keySpec("txHash")},
 	}
 
-	i2 := mgo.Index{
-		Key: []string{"quoteToken"},
-	}
-
-	i3 := mgo.Index{
-		Key: []string{"createdAt"},
-	}
-
-	i4 := mgo.Index{
-		Key:    []string{"hash"},
-		Sparse: true,
-		Unique: true,
-	}
-
-	i5 := mgo.Index{
-		Key:    []string{"makerOrderHash"},
-		Sparse: true,
-	}
-
-	i6 := mgo.Index{
-		Key:    []string{"takerOrderHash"},
-		Sparse: true,
-	}
-
-	/*i7 := mgo.Index{
-		Key: []string{"createdAt", "status", "baseToken", "quoteToken"},
-	}*/
-
-	/*i8 := mgo.Index{
-		Key:       []string{"price"},
-		Collation: &mgo.Collation{NumericOrdering: true, Locale: "en"},
-	}*/
-
-	indexByStatusMaker := mgo.Index{
-		Key: []string{"status", "maker"},
-	}
-
-	indexByStatusTaker := mgo.Index{
-		Key: []string{"status", "taker"},
-	}
-
-	indexByTxHash := mgo.Index{
-		Key: []string{"txHash"},
-	}
-
-	err := db.Session.DB(dbName).C(collection).EnsureIndex(i1)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(i2)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(i3)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(i4)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(i5)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(i6)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(indexByStatusMaker)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(indexByStatusTaker)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dbName).C(collection).EnsureIndex(indexByTxHash)
-	if err != nil {
-		panic(err)
+	for _, index := range indexes {
+		if err := db.EnsureIndex(dbName, collection, index); err != nil {
+			panic(err)
+		}
 	}
 
 	return &TradeDao{collection, dbName}
@@ -123,10 +48,10 @@ func NewTradeDao() *TradeDao {
 // It accepts 1 or more trades as input.
 // All the trades are inserted in one query itself.
 func (dao *TradeDao) Create(trades ...*types.Trade) error {
-	y := make([]interface{}, len(trades))
+	y := make([]interface{}, 0, len(trades))
 
 	for _, trade := range trades {
-		trade.ID = bson.NewObjectId()
+		trade.ID = bson.NewObjectID()
 		trade.CreatedAt = time.Now()
 		trade.UpdatedAt = time.Now()
 		y = append(y, trade)
@@ -168,7 +93,7 @@ func (dao *TradeDao) Delete(trades ...*types.Trade) error {
 
 func (dao *TradeDao) Update(trade *types.Trade) error {
 	trade.UpdatedAt = time.Now()
-	err := db.Update(dao.dbName, dao.collectionName, bson.M{"_id": trade.ID}, trade)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"_id": trade.ID}, trade, false)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -177,10 +102,10 @@ func (dao *TradeDao) Update(trade *types.Trade) error {
 	return nil
 }
 
-func (dao *TradeDao) Upsert(id bson.ObjectId, t *types.Trade) error {
+func (dao *TradeDao) Upsert(id bson.ObjectID, t *types.Trade) error {
 	t.UpdatedAt = time.Now()
 
-	err := db.Upsert(dao.dbName, dao.collectionName, bson.M{"_id": id}, t)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"_id": id}, t, true)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -192,7 +117,7 @@ func (dao *TradeDao) Upsert(id bson.ObjectId, t *types.Trade) error {
 func (dao *TradeDao) UpsertByHash(h string, t *types.Trade) error {
 	t.UpdatedAt = time.Now()
 
-	err := db.Upsert(dao.dbName, dao.collectionName, bson.M{"hash": h}, t)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"hash": h}, t, true)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -205,14 +130,9 @@ func (dao *TradeDao) FindAndModify(h string, t *types.Trade) (*types.Trade, erro
 	t.UpdatedAt = time.Now()
 	query := bson.M{"hash": h}
 	updated := &types.Trade{}
-	change := mgo.Change{
-		Update:    types.TradeBSONUpdate{Trade: t},
-		Upsert:    true,
-		Remove:    false,
-		ReturnNew: true,
-	}
+	update := types.TradeBSONUpdate{Trade: t}
 
-	err := db.FindAndModify(dao.dbName, dao.collectionName, query, change, &updated)
+	err := db.FindAndModify(dao.dbName, dao.collectionName, query, update, updated)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -290,7 +210,7 @@ func (dao *TradeDao) Aggregate(q []bson.M) ([]*types.Tick, error) {
 // GetByPairName fetches all the trades corresponding to a particular pair name.
 func (dao *TradeDao) GetByPairName(name string) ([]*types.Trade, error) {
 	var res []*types.Trade
-	q := bson.M{"pairName": bson.RegEx{
+	q := bson.M{"pairName": bson.Regex{
 		Pattern: name,
 		Options: "i",
 	}}

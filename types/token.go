@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Token struct is used to model the token data in the system and DB
 type Token struct {
-	ID       bson.ObjectId `json:"-" bson:"_id"`
+	ID       bson.ObjectID `json:"-" bson:"_id"`
 	Symbol   string        `json:"symbol" bson:"symbol"`
 	Asset    string        `json:"asset" bson:"asset"`
 	Decimals int           `json:"decimals" bson:"decimals"`
@@ -26,7 +26,7 @@ type Token struct {
 
 // TokenRecord is the struct which is stored in db
 type TokenRecord struct {
-	ID       bson.ObjectId `json:"-" bson:"_id"`
+	ID       bson.ObjectID `json:"-" bson:"_id"`
 	Symbol   string        `json:"symbol" bson:"symbol"`
 	Asset    string        `json:"asset" bson:"asset"`
 	Decimals int           `json:"decimals" bson:"decimals"`
@@ -110,10 +110,11 @@ func (t *Token) UnmarshalJSON(b []byte) error {
 	}
 
 	if token.ID != nil && *token.ID != "" {
-		if !bson.IsObjectIdHex(*token.ID) {
+		id, err := bson.ObjectIDFromHex(*token.ID)
+		if err != nil {
 			return errors.New("invalid token id")
 		}
-		t.ID = bson.ObjectIdHex(*token.ID)
+		t.ID = id
 	}
 
 	if token.CreatedAt != nil {
@@ -133,8 +134,8 @@ func (t *Token) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// GetBSON implements bson.Getter
-func (t *Token) GetBSON() (interface{}, error) {
+// MarshalBSON implements bson.Marshaler
+func (t *Token) MarshalBSON() ([]byte, error) {
 	tr := TokenRecord{
 		ID:        t.ID,
 		Symbol:    t.Symbol,
@@ -148,14 +149,14 @@ func (t *Token) GetBSON() (interface{}, error) {
 		UpdatedAt: t.UpdatedAt,
 	}
 
-	return tr, nil
+	return bson.Marshal(tr)
 }
 
-// SetBSON implemenets bson.Setter
-func (t *Token) SetBSON(raw bson.Raw) error {
+// UnmarshalBSON implements bson.Unmarshaler
+func (t *Token) UnmarshalBSON(data []byte) error {
 	decoded := &TokenRecord{}
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}

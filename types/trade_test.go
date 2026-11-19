@@ -5,14 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"github.com/byteball/odex-backend/utils"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestTradeJSON(t *testing.T) {
 	expected := &Trade{
-		//ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		//ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -43,7 +44,7 @@ func TestTradeJSON(t *testing.T) {
 
 func TestTradeBSON(t *testing.T) {
 	expected := &Trade{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",

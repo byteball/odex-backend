@@ -7,7 +7,7 @@ import (
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type InfoService struct {

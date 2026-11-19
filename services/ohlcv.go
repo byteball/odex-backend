@@ -8,7 +8,7 @@ import (
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils"
 	"github.com/byteball/odex-backend/ws"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type OHLCVService struct {

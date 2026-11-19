@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"io/ioutil"
 	"log"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -16,6 +16,12 @@ import (
 )
 
 var db *daos.Database
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	testutils.DropTestDB()
+	os.Exit(code)
+}
 
 func setupTest() (
 	*Engine,
@@ -32,14 +38,7 @@ func setupTest() (
 	log.SetFlags(log.LstdFlags | log.Llongfile)
 	log.SetPrefix("\nLOG: ")
 
-	mongoServer := testutils.NewDBTestServer()
-	temp, err := ioutil.TempDir("", "test")
-	if err != nil {
-		panic(err)
-	}
-	mongoServer.SetPath(temp)
-
-	session := mongoServer.Session()
+	session := testutils.NewDBTestClient()
 	daos.InitSession(session)
 	rabbitConn := rabbitmq.InitConnection("amqp://guest:guest@localhost:5672/")
 

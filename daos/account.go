@@ -5,8 +5,9 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // AccountDao contains:
@@ -21,12 +22,12 @@ type AccountDao struct {
 func NewAccountDao() *AccountDao {
 	dbName := app.Config.DBName
 	collection := "accounts"
-	index := mgo.Index{
-		Key:    []string{"address"},
-		Unique: true,
+	index := mongo.IndexModel{
+		Keys:    keySpec("address"),
+		Options: options.Index().SetUnique(true),
 	}
 
-	err := db.Session.DB(dbName).C(collection).EnsureIndex(index)
+	err := db.EnsureIndex(dbName, collection, index)
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +37,7 @@ func NewAccountDao() *AccountDao {
 
 // Create function performs the DB insertion task for Balance collection
 func (dao *AccountDao) Create(a *types.Account) error {
-	a.ID = bson.NewObjectId()
+	a.ID = bson.NewObjectID()
 	a.CreatedAt = time.Now()
 	a.UpdatedAt = time.Now()
 
@@ -54,14 +55,9 @@ func (dao *AccountDao) FindOrCreate(addr string) (*types.Account, error) {
 	query := bson.M{"address": addr}
 	updated := &types.Account{}
 
-	change := mgo.Change{
-		Update:    types.AccountBSONUpdate{Account: a},
-		Upsert:    true,
-		Remove:    false,
-		ReturnNew: true,
-	}
+	update := types.AccountBSONUpdate{Account: a}
 
-	err := db.FindAndModify(dao.dbName, dao.collectionName, query, change, &updated)
+	err := db.FindAndModify(dao.dbName, dao.collectionName, query, update, updated)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -75,7 +71,7 @@ func (dao *AccountDao) GetAll() (res []types.Account, err error) {
 	return
 }
 
-func (dao *AccountDao) GetByID(id bson.ObjectId) (*types.Account, error) {
+func (dao *AccountDao) GetByID(id bson.ObjectID) (*types.Account, error) {
 	res := []types.Account{}
 	q := bson.M{"_id": id}
 

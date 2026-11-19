@@ -16,7 +16,7 @@ import (
 	"github.com/byteball/odex-backend/utils"
 	"github.com/byteball/odex-backend/ws"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/byteball/odex-backend/rabbitmq"
 	"github.com/byteball/odex-backend/types"
@@ -69,7 +69,7 @@ func NewOrderService(
 }
 
 // GetByID fetches the details of an order using order's mongo ID
-func (s *OrderService) GetByID(id bson.ObjectId) (*types.Order, error) {
+func (s *OrderService) GetByID(id bson.ObjectID) (*types.Order, error) {
 	return s.orderDao.GetByID(id)
 }
 

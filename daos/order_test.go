@@ -4,12 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils"
 	"github.com/byteball/odex-backend/utils/testutils"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +22,7 @@ func TestUpdateOrderByHash(t *testing.T) {
 	exchange := "0x2"
 
 	o := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    "0x1",
 		MatcherAddress: exchange,
 		BaseToken:      "0x3",
@@ -90,7 +87,7 @@ func TestOrderUpdate(t *testing.T) {
 	}
 
 	o := &types.Order{
-		ID:           bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:           utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:  "0x1",
 		BaseToken:    "0x3",
 		QuoteToken:   "0x4",
@@ -151,7 +148,7 @@ func TestOrderDao1(t *testing.T) {
 	}
 
 	o := &types.Order{
-		ID:           bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:           utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:  "0x1",
 		BaseToken:    "0x3",
 		QuoteToken:   "0x4",
@@ -233,7 +230,7 @@ func TestGetUserLockedBalance(t *testing.T) {
 	}
 
 	o1 := &types.Order{
-		ID:                  bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:                  utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:         user,
 		MatcherAddress:      exchange,
 		FilledAmount:        0,
@@ -249,7 +246,7 @@ func TestGetUserLockedBalance(t *testing.T) {
 	}
 
 	o2 := &types.Order{
-		ID:                  bson.ObjectIdHex("537f700b537461b70c5f0002"),
+		ID:                  utils.MustObjectID("537f700b537461b70c5f0002"),
 		UserAddress:         user,
 		MatcherAddress:      exchange,
 		FilledAmount:        0,
@@ -261,11 +258,11 @@ func TestGetUserLockedBalance(t *testing.T) {
 		Status:              "OPEN",
 		Side:                "BUY",
 		PairName:            "ZRX/WETH",
-		Hash:                "0x12",
+		Hash:                "0x13",
 	}
 
 	o3 := &types.Order{
-		ID:                  bson.ObjectIdHex("537f700b537461b70c5f0003"),
+		ID:                  utils.MustObjectID("537f700b537461b70c5f0003"),
 		UserAddress:         user,
 		MatcherAddress:      exchange,
 		FilledAmount:        5,
@@ -277,11 +274,11 @@ func TestGetUserLockedBalance(t *testing.T) {
 		Status:              "PARTIAL_FILLED",
 		Side:                "BUY",
 		PairName:            "ZRX/WETH",
-		Hash:                "0x12",
+		Hash:                "0x14",
 	}
 
 	o4 := &types.Order{
-		ID:                  bson.ObjectIdHex("537f700b537461b70c5f0004"),
+		ID:                  utils.MustObjectID("537f700b537461b70c5f0004"),
 		UserAddress:         user,
 		MatcherAddress:      exchange,
 		Amount:              10,
@@ -293,7 +290,7 @@ func TestGetUserLockedBalance(t *testing.T) {
 		Status:              "FILLED",
 		Side:                "BUY",
 		PairName:            "ZRX/WETH",
-		Hash:                "0x12",
+		Hash:                "0x15",
 	}
 
 	dao.Create(o1)
@@ -322,7 +319,7 @@ func TestGetUserOrderHistory(t *testing.T) {
 	quoteToken := "0x4"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		FilledAmount:   0,
@@ -337,7 +334,7 @@ func TestGetUserOrderHistory(t *testing.T) {
 	}
 
 	o2 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0002"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0002"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		FilledAmount:   0,
@@ -348,11 +345,11 @@ func TestGetUserOrderHistory(t *testing.T) {
 		Status:         "OPEN",
 		Side:           "BUY",
 		PairName:       "ZRX/WETH",
-		Hash:           "0x12",
+		Hash:           "0x13",
 	}
 
 	o3 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0003"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0003"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		BaseToken:      baseToken,
@@ -363,11 +360,11 @@ func TestGetUserOrderHistory(t *testing.T) {
 		Status:         "INVALID",
 		Side:           "BUY",
 		PairName:       "ZRX/WETH",
-		Hash:           "0x12",
+		Hash:           "0x14",
 	}
 
 	o4 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0004"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0004"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		BaseToken:      baseToken,
@@ -378,7 +375,7 @@ func TestGetUserOrderHistory(t *testing.T) {
 		Status:         "PARTIAL_FILLED",
 		Side:           "BUY",
 		PairName:       "ZRX/WETH",
-		Hash:           "0x12",
+		Hash:           "0x15",
 	}
 
 	dao.Create(o1)
@@ -412,7 +409,7 @@ func TestUpdateOrderFilledAmount1(t *testing.T) {
 	hash := "0x5"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		MatcherAddress: exchange,
 		UserAddress:    user,
 		BaseToken:      baseToken,
@@ -458,7 +455,7 @@ func TestUpdateOrderFilledAmount2(t *testing.T) {
 	hash := "0x5"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		Amount:         10,
@@ -504,7 +501,7 @@ func TestUpdateOrderFilledAmount3(t *testing.T) {
 	hash := "0x5"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		Amount:         10,
@@ -551,7 +548,7 @@ func TestUpdateOrderFilledAmounts(t *testing.T) {
 	hash2 := "0x6"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		Amount:         2,
@@ -565,7 +562,7 @@ func TestUpdateOrderFilledAmounts(t *testing.T) {
 	}
 
 	o2 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		Amount:         10,
@@ -613,7 +610,7 @@ func TestOrderStatusesByHashes(t *testing.T) {
 	hash2 := "0x6"
 
 	o1 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		BaseToken:      baseToken,
@@ -627,7 +624,7 @@ func TestOrderStatusesByHashes(t *testing.T) {
 	}
 
 	o2 := &types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0002"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0002"),
 		UserAddress:    user,
 		MatcherAddress: exchange,
 		BaseToken:      baseToken,
@@ -661,10 +658,7 @@ func TestOrderStatusesByHashes(t *testing.T) {
 }
 
 func ExampleGetOrderBook() {
-	session, err := mgo.Dial(app.Config.MongoURL)
-	if err != nil {
-		panic(err)
-	}
+	session := NewSession()
 
 	db = &Database{session}
 	pairDao := NewPairDao(PairDaoDBOption("odex"))
@@ -684,10 +678,7 @@ func ExampleGetOrderBook() {
 }
 
 func ExampleGetOrderBookPrice() {
-	session, err := mgo.Dial(app.Config.MongoURL)
-	if err != nil {
-		panic(err)
-	}
+	session := NewSession()
 
 	db = &Database{session}
 
@@ -698,7 +689,7 @@ func ExampleGetOrderBookPrice() {
 		panic(err)
 	}
 
-	orderPricePoint, _, __, err := orderDao.GetOrderBookPrice(pair, float64(59303), "BUY")
+	orderPricePoint, _, _, err := orderDao.GetOrderBookPrice(pair, float64(59303), "BUY")
 	if err != nil {
 		panic(err)
 	}
@@ -707,10 +698,7 @@ func ExampleGetOrderBookPrice() {
 }
 
 func ExampleGetRawOrderBook() {
-	session, err := mgo.Dial(app.Config.MongoURL)
-	if err != nil {
-		panic(err)
-	}
+	session := NewSession()
 
 	db = &Database{session}
 

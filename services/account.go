@@ -3,7 +3,7 @@ package services
 import (
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type AccountService struct {
@@ -106,7 +106,7 @@ func (s *AccountService) FindOrCreate(addr string) (*types.Account, error) {
 	return a, nil
 }
 
-func (s *AccountService) GetByID(id bson.ObjectId) (*types.Account, error) {
+func (s *AccountService) GetByID(id bson.ObjectID) (*types.Account, error) {
 	return s.AccountDao.GetByID(id)
 }
 

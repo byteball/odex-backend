@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	bson "github.com/globalsign/mgo/bson"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -145,11 +145,11 @@ func (_m *TokenService) GetByAssetOrSymbol(a string) (*types.Token, error) {
 }
 
 // GetByID provides a mock function with given fields: id
-func (_m *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
+func (_m *TokenService) GetByID(id bson.ObjectID) (*types.Token, error) {
 	ret := _m.Called(id)
 
 	var r0 *types.Token
-	if rf, ok := ret.Get(0).(func(bson.ObjectId) *types.Token); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID) *types.Token); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
@@ -158,7 +158,7 @@ func (_m *TokenService) GetByID(id bson.ObjectId) (*types.Token, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
+	if rf, ok := ret.Get(1).(func(bson.ObjectID) error); ok {
 		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)

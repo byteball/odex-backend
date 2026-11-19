@@ -5,7 +5,7 @@ import (
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // PairService struct with daos required, responsible for communicating with daos.
@@ -187,7 +187,7 @@ func (s *PairService) Create(pair *types.Pair) error {
 }
 
 // GetByID fetches details of a pair using its mongo ID
-func (s *PairService) GetByID(id bson.ObjectId) (*types.Pair, error) {
+func (s *PairService) GetByID(id bson.ObjectID) (*types.Pair, error) {
 	return s.pairDao.GetByID(id)
 }
 

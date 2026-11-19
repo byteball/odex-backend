@@ -1,13 +1,18 @@
 package testutils
 
 import (
+	"context"
 	"encoding/json"
+	"os"
 	"testing"
 
+	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/dbtest"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func CompareEngineResponse(t *testing.T, a, b *types.EngineResponse) {
@@ -147,6 +152,47 @@ func CompareStructs(t *testing.T, expected interface{}, order interface{}) {
 	}
 }
 
-func NewDBTestServer() *dbtest.DBServer {
-	return &dbtest.DBServer{}
+// testDBName is unique per test process so parallel test binaries and real databases never collide.
+var testDBName = "odex_test_" + bson.NewObjectID().Hex()
+
+func connectTestClient() *mongo.Client {
+	url := os.Getenv("MONGO_TEST_URL")
+	if url == "" {
+		url = "mongodb://localhost:27017"
+	}
+
+	client, err := mongo.Connect(options.Client().ApplyURI(url).SetRegistry(types.BSONRegistry))
+	if err != nil {
+		panic(err)
+	}
+
+	if err := client.Ping(context.Background(), nil); err != nil {
+		panic(err)
+	}
+
+	return client
+}
+
+// NewDBTestClient connects to the MongoDB server at MONGO_TEST_URL (default mongodb://localhost:27017)
+// and points the app at this process's own empty test database. Call DropTestDB from TestMain to remove it.
+func NewDBTestClient() *mongo.Client {
+	app.Config.DBName = testDBName
+
+	client := connectTestClient()
+
+	if err := client.Database(testDBName).Drop(context.Background()); err != nil {
+		panic(err)
+	}
+
+	return client
+}
+
+// DropTestDB removes the database created by NewDBTestClient.
+func DropTestDB() {
+	client := connectTestClient()
+	defer client.Disconnect(context.Background())
+
+	if err := client.Database(testDBName).Drop(context.Background()); err != nil {
+		panic(err)
+	}
 }

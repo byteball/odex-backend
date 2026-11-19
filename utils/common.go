@@ -6,7 +6,19 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
+
+// MustObjectID parses a hex string into an ObjectID and panics if it is invalid.
+func MustObjectID(hex string) bson.ObjectID {
+	id, err := bson.ObjectIDFromHex(hex)
+	if err != nil {
+		panic(err)
+	}
+
+	return id
+}
 
 // MockServices is a that tolds different mock services to be passed
 // around easily for testing setup

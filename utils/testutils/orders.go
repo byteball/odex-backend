@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/bson"
+	"github.com/byteball/odex-backend/utils"
 )
 
 func GetTestOrder1() types.Order {
 	return types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xe41d2489571d322189246dafa5ebde1f4699f498",
@@ -28,7 +28,7 @@ func GetTestOrder1() types.Order {
 
 func GetTestOrder2() types.Order {
 	return types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0x4bc89ac6f1c55ea645294f3fed949813a768ac6d",
@@ -47,7 +47,7 @@ func GetTestOrder2() types.Order {
 
 func GetTestOrder3() types.Order {
 	return types.Order{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0000"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0000"),
 		UserAddress:    "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		MatcherAddress: "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0x4bc89ac6f1c55ea645294f3fed949813a768ac6d",

@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	bson "github.com/globalsign/mgo/bson"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -176,11 +176,11 @@ func (_m *OrderDao) GetByHashes(hashes []string) ([]*types.Order, error) {
 }
 
 // GetByID provides a mock function with given fields: id
-func (_m *OrderDao) GetByID(id bson.ObjectId) (*types.Order, error) {
+func (_m *OrderDao) GetByID(id bson.ObjectID) (*types.Order, error) {
 	ret := _m.Called(id)
 
 	var r0 *types.Order
-	if rf, ok := ret.Get(0).(func(bson.ObjectId) *types.Order); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID) *types.Order); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
@@ -189,7 +189,7 @@ func (_m *OrderDao) GetByID(id bson.ObjectId) (*types.Order, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
+	if rf, ok := ret.Get(1).(func(bson.ObjectID) error); ok {
 		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)
@@ -494,11 +494,11 @@ func (_m *OrderDao) GetUserLockedBalance(account string, token string) (int64, [
 }
 
 // Update provides a mock function with given fields: id, o
-func (_m *OrderDao) Update(id bson.ObjectId, o *types.Order) error {
+func (_m *OrderDao) Update(id bson.ObjectID, o *types.Order) error {
 	ret := _m.Called(id, o)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(bson.ObjectId, *types.Order) error); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID, *types.Order) error); ok {
 		r0 = rf(id, o)
 	} else {
 		r0 = ret.Error(0)
@@ -617,11 +617,11 @@ func (_m *OrderDao) UpdateOrderStatusesByHashes(status string, hashes ...string)
 }
 
 // Upsert provides a mock function with given fields: id, o
-func (_m *OrderDao) Upsert(id bson.ObjectId, o *types.Order) error {
+func (_m *OrderDao) Upsert(id bson.ObjectID, o *types.Order) error {
 	ret := _m.Called(id, o)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(bson.ObjectId, *types.Order) error); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID, *types.Order) error); ok {
 		r0 = rf(id, o)
 	} else {
 		r0 = ret.Error(0)

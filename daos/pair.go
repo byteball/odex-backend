@@ -5,8 +5,9 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // PairDao contains:
@@ -27,24 +28,24 @@ func PairDaoDBOption(dbName string) func(dao *PairDao) error {
 }
 
 // NewPairDao returns a new instance of PairDao
-func NewPairDao(options ...PairDaoOption) *PairDao {
+func NewPairDao(opts ...PairDaoOption) *PairDao {
 	dao := &PairDao{}
 	dao.collectionName = "pairs"
 	dao.dbName = app.Config.DBName
 
-	for _, op := range options {
+	for _, op := range opts {
 		err := op(dao)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	index := mgo.Index{
-		Key:    []string{"baseAsset", "quoteAsset"},
-		Unique: true,
+	index := mongo.IndexModel{
+		Keys:    keySpec("baseAsset", "quoteAsset"),
+		Options: options.Index().SetUnique(true),
 	}
 
-	err := db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(index)
+	err := db.EnsureIndex(dao.dbName, dao.collectionName, index)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +55,7 @@ func NewPairDao(options ...PairDaoOption) *PairDao {
 
 // Create function performs the DB insertion task for pair collection
 func (dao *PairDao) Create(pair *types.Pair) error {
-	pair.ID = bson.NewObjectId()
+	pair.ID = bson.NewObjectID()
 	pair.CreatedAt = time.Now()
 	pair.UpdatedAt = time.Now()
 
@@ -146,7 +147,7 @@ func (dao *PairDao) GetActivePairs() ([]types.Pair, error) {
 }
 
 // GetByID function fetches details of a pair using pair's mongo ID.
-func (dao *PairDao) GetByID(id bson.ObjectId) (*types.Pair, error) {
+func (dao *PairDao) GetByID(id bson.ObjectID) (*types.Pair, error) {
 	var response *types.Pair
 	err := db.GetByID(dao.dbName, dao.collectionName, id, &response)
 	return response, err
@@ -156,7 +157,7 @@ func (dao *PairDao) GetByID(id bson.ObjectId) (*types.Pair, error) {
 // It makes CASE INSENSITIVE search query one pair's name
 func (dao *PairDao) GetByName(name string) (*types.Pair, error) {
 	var res []*types.Pair
-	q := bson.M{"name": bson.RegEx{
+	q := bson.M{"name": bson.Regex{
 		Pattern: name,
 		Options: "i",
 	}}

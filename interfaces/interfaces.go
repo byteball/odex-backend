@@ -6,19 +6,19 @@ import (
 	"github.com/byteball/odex-backend/rabbitmq"
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/ws"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type OrderDao interface {
 	Create(o *types.Order) error
-	Update(id bson.ObjectId, o *types.Order) error
-	Upsert(id bson.ObjectId, o *types.Order) error
+	Update(id bson.ObjectID, o *types.Order) error
+	Upsert(id bson.ObjectID, o *types.Order) error
 	Delete(orders ...*types.Order) error
 	DeleteByHashes(hashes ...string) error
 	UpdateAllByHash(h string, o *types.Order) error
 	UpdateByHash(h string, o *types.Order) error
 	UpsertByHash(h string, o *types.Order) error
-	GetByID(id bson.ObjectId) (*types.Order, error)
+	GetByID(id bson.ObjectID) (*types.Order, error)
 	GetByHash(h string) (*types.Order, error)
 	GetByHashes(hashes []string) ([]*types.Order, error)
 
@@ -45,7 +45,7 @@ type OrderDao interface {
 type AccountDao interface {
 	Create(account *types.Account) (err error)
 	GetAll() (res []types.Account, err error)
-	GetByID(id bson.ObjectId) (*types.Account, error)
+	GetByID(id bson.ObjectID) (*types.Account, error)
 	GetByAddress(owner string) (response *types.Account, err error)
 	GetTokenBalances(owner string) (map[string]*types.TokenBalance, error)
 	GetTokenBalance(owner string, token string) (*types.TokenBalance, error)
@@ -59,7 +59,7 @@ type PairDao interface {
 	Create(o *types.Pair) error
 	GetAll() ([]types.Pair, error)
 	GetActivePairs() ([]types.Pair, error)
-	GetByID(id bson.ObjectId) (*types.Pair, error)
+	GetByID(id bson.ObjectID) (*types.Pair, error)
 	GetByName(name string) (*types.Pair, error)
 	GetByTokenSymbols(baseTokenSymbol, quoteTokenSymbol string) (*types.Pair, error)
 	GetByAsset(baseToken, quoteToken string) (*types.Pair, error)
@@ -99,7 +99,7 @@ type TradeDao interface {
 type TokenDao interface {
 	Create(token *types.Token) error
 	GetAll() ([]types.Token, error)
-	GetByID(id bson.ObjectId) (*types.Token, error)
+	GetByID(id bson.ObjectID) (*types.Token, error)
 	GetByAsset(asset string) (*types.Token, error)
 	GetBySymbol(symbol string) (*types.Token, error)
 	GetByAssetOrSymbol(assetOrSymbol string) (*types.Token, error)
@@ -132,7 +132,7 @@ type OHLCVService interface {
 }
 
 type OrderService interface {
-	GetByID(id bson.ObjectId) (*types.Order, error)
+	GetByID(id bson.ObjectID) (*types.Order, error)
 	GetByHash(h string) (*types.Order, error)
 	GetByHashes(hashes []string) ([]*types.Order, error)
 	GetByUserAddress(a string, limit ...int) ([]*types.Order, error)
@@ -163,7 +163,7 @@ type OrderBookService interface {
 type PairService interface {
 	Create(pair *types.Pair) error
 	CreatePairs(token string) ([]*types.Pair, error)
-	GetByID(id bson.ObjectId) (*types.Pair, error)
+	GetByID(id bson.ObjectID) (*types.Pair, error)
 	GetByAsset(bt, qt string) (*types.Pair, error)
 	GetTokenPairData(bt, qt string) ([]*types.Tick, error)
 	GetAllExactTokenPairData() ([]*types.PairData, error)
@@ -176,7 +176,7 @@ type PairService interface {
 
 type TokenService interface {
 	Create(token *types.Token) error
-	GetByID(id bson.ObjectId) (*types.Token, error)
+	GetByID(id bson.ObjectID) (*types.Token, error)
 	GetByAsset(a string) (*types.Token, error)
 	GetBySymbol(s string) (*types.Token, error)
 	GetByAssetOrSymbol(a string) (*types.Token, error)
@@ -213,7 +213,7 @@ type TradeService interface {
 type AccountService interface {
 	GetAll() ([]types.Account, error)
 	Create(account *types.Account) error
-	GetByID(id bson.ObjectId) (*types.Account, error)
+	GetByID(id bson.ObjectID) (*types.Account, error)
 	GetByAddress(address string) (*types.Account, error)
 	FindOrCreate(address string) (*types.Account, error)
 	GetTokenBalance(owner string, token string) (*types.TokenBalance, error)

@@ -1,31 +1,23 @@
 package daos
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/byteball/odex-backend/types"
 	"github.com/byteball/odex-backend/utils/testutils"
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// var db *Database
-
-// func TestMain(m *testing.M) {
-// 	db := &Database{}
-// 	dropTestServer := testutils.InitDBTestServer(db)
-// 	defer dropTestServer()
-// 	m.Run()
-// }
+func TestMain(m *testing.M) {
+	code := m.Run()
+	testutils.DropTestDB()
+	os.Exit(code)
+}
 
 func init() {
-	server := testutils.NewDBTestServer()
-	temp, _ := ioutil.TempDir("", "test")
-	server.SetPath(temp)
-
-	session := server.Session()
-	db = &Database{Session: session}
+	db = &Database{Session: testutils.NewDBTestClient()}
 }
 
 func TestAccountDao(t *testing.T) {
@@ -51,7 +43,7 @@ func TestAccountDao(t *testing.T) {
 	}
 
 	account := &types.Account{
-		ID:      bson.NewObjectId(),
+		ID:      bson.NewObjectID(),
 		Address: address,
 		TokenBalances: map[string]*types.TokenBalance{
 			asset1: tokenBalance1,
@@ -96,7 +88,7 @@ func TestAccountGetAllTokenBalances(t *testing.T) {
 	}
 
 	account := &types.Account{
-		ID:      bson.NewObjectId(),
+		ID:      bson.NewObjectID(),
 		Address: address,
 		TokenBalances: map[string]*types.TokenBalance{
 			asset1: tokenBalance1,
@@ -142,7 +134,7 @@ func TestGetTokenBalance(t *testing.T) {
 	}
 
 	account := &types.Account{
-		ID:      bson.NewObjectId(),
+		ID:      bson.NewObjectID(),
 		Address: address,
 		TokenBalances: map[string]*types.TokenBalance{
 			asset1: tokenBalance1,
@@ -187,7 +179,7 @@ func TestUpdateAccountBalance(t *testing.T) {
 	}
 
 	account := &types.Account{
-		ID:      bson.NewObjectId(),
+		ID:      bson.NewObjectID(),
 		Address: address,
 		TokenBalances: map[string]*types.TokenBalance{
 			asset1: tokenBalance1,

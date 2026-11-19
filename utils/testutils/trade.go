@@ -2,12 +2,12 @@ package testutils
 
 import (
 	"github.com/byteball/odex-backend/types"
-	"github.com/globalsign/mgo/bson"
+	"github.com/byteball/odex-backend/utils"
 )
 
 func GetTestTrade1() types.Trade {
 	return types.Trade{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0001"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0001"),
 		Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xa114dd77c888aa2edb699de4faa2afbe4575ffd3",
@@ -23,7 +23,7 @@ func GetTestTrade1() types.Trade {
 
 func GetTestTrade2() types.Trade {
 	return types.Trade{
-		ID:             bson.ObjectIdHex("537f700b537461b70c5f0007"),
+		ID:             utils.MustObjectID("537f700b537461b70c5f0007"),
 		Maker:          "0x7a9f3cd060ab180f36c17fe6bdf9974f577d77aa",
 		Taker:          "0xae55690d4b079460e6ac28aaa58c9ec7b73a7485",
 		BaseToken:      "0xa114dd77c888aa2edb699de4faa2afbe4575ffd3",

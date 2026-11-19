@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Order contains the data related to an order sent by the user
 type Order struct {
-	ID                  bson.ObjectId          `json:"id" bson:"_id"`
+	ID                  bson.ObjectID          `json:"id" bson:"_id"`
 	UserAddress         string                 `json:"userAddress" bson:"userAddress"`
 	MatcherAddress      string                 `json:"matcherAddress" bson:"matcherAddress"`
 	AffiliateAddress    string                 `json:"affiliateAddress" bson:"affiliateAddress"`
@@ -135,7 +135,7 @@ func (o *Order) SellTokenSymbol() string {
 	return ""
 }
 
-//TODO handle error case
+// TODO handle error case
 func (o *Order) SellToken() string {
 	if o.Side == "BUY" {
 		return o.QuoteToken
@@ -299,7 +299,7 @@ func (o *Order) BuyAmount(pairMultiplier int64) int64 {
 	}
 }
 
-//TODO handle error case ?
+// TODO handle error case ?
 func (o *Order) EncodedSide() int64 {
 	if o.Side == "BUY" {
 		return 0
@@ -404,8 +404,10 @@ func (o *Order) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if order.ID != nil && bson.IsObjectIdHex(*order.ID) {
-		o.ID = bson.ObjectIdHex(*order.ID)
+	if order.ID != nil {
+		if id, err := bson.ObjectIDFromHex(*order.ID); err == nil {
+			o.ID = id
+		}
 	}
 
 	if order.PairName != nil {
@@ -489,7 +491,7 @@ func (o *Order) UnmarshalJSON(b []byte) error {
 
 // OrderRecord is the object that will be saved in the database
 type OrderRecord struct {
-	ID                  bson.ObjectId `json:"id" bson:"_id"`
+	ID                  bson.ObjectID `json:"id" bson:"_id"`
 	UserAddress         string        `json:"userAddress" bson:"userAddress"`
 	MatcherAddress      string        `json:"matcherAddress" bson:"matcherAddress"`
 	AffiliateAddress    string        `json:"affiliateAddress" bson:"affiliateAddress"`
@@ -510,7 +512,7 @@ type OrderRecord struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
-func (o *Order) GetBSON() (interface{}, error) {
+func (o *Order) MarshalBSON() ([]byte, error) {
 	or := OrderRecord{
 		PairName:            o.PairName,
 		MatcherAddress:      o.MatcherAddress,
@@ -529,8 +531,8 @@ func (o *Order) GetBSON() (interface{}, error) {
 		UpdatedAt:           o.UpdatedAt,
 	}
 
-	if o.ID == "" {
-		or.ID = bson.NewObjectId()
+	if o.ID.IsZero() {
+		or.ID = bson.NewObjectID()
 	} else {
 		or.ID = o.ID
 	}
@@ -539,12 +541,12 @@ func (o *Order) GetBSON() (interface{}, error) {
 		or.FilledAmount = o.FilledAmount
 	}
 
-	return or, nil
+	return bson.Marshal(or)
 }
 
-func (o *Order) SetBSON(raw bson.Raw) error {
+func (o *Order) UnmarshalBSON(data []byte) error {
 	decoded := new(struct {
-		ID                  bson.ObjectId          `json:"id,omitempty" bson:"_id"`
+		ID                  bson.ObjectID          `json:"id,omitempty" bson:"_id"`
 		PairName            string                 `json:"pairName" bson:"pairName"`
 		MatcherAddress      string                 `json:"matcherAddress" bson:"matcherAddress"`
 		AffiliateAddress    string                 `json:"affiliateAddress" bson:"affiliateAddress"`
@@ -563,7 +565,7 @@ func (o *Order) SetBSON(raw bson.Raw) error {
 		UpdatedAt           time.Time              `json:"updatedAt" bson:"updatedAt"`
 	})
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -605,7 +607,7 @@ type OrderBSONUpdate struct {
 	*Order
 }
 
-func (o OrderBSONUpdate) GetBSON() (interface{}, error) {
+func (o OrderBSONUpdate) MarshalBSON() ([]byte, error) {
 	now := time.Now()
 
 	set := bson.M{
@@ -629,7 +631,7 @@ func (o OrderBSONUpdate) GetBSON() (interface{}, error) {
 	}
 
 	setOnInsert := bson.M{
-		"_id":       bson.NewObjectId(),
+		"_id":       bson.NewObjectID(),
 		"hash":      o.Hash,
 		"createdAt": now,
 	}
@@ -639,7 +641,7 @@ func (o OrderBSONUpdate) GetBSON() (interface{}, error) {
 		"$setOnInsert": setOnInsert,
 	}
 
-	return update, nil
+	return bson.Marshal(update)
 }
 
 type OrderData struct {
@@ -727,7 +729,7 @@ func (o *OrderData) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (o *OrderData) GetBSON() (interface{}, error) {
+func (o *OrderData) MarshalBSON() ([]byte, error) {
 	type PairID struct {
 		PairName   string `json:"pairName" bson:"pairName"`
 		BaseToken  string `json:"baseToken" bson:"baseToken"`
@@ -740,7 +742,7 @@ func (o *OrderData) GetBSON() (interface{}, error) {
 
 	bestPrice := o.BestPrice
 
-	return struct {
+	return bson.Marshal(struct {
 		ID          PairID  `json:"id,omitempty" bson:"_id"`
 		OrderVolume int64   `json:"orderCount" bson:"orderCount"`
 		OrderCount  int64   `json:"orderVolume" bson:"orderVolume"`
@@ -754,10 +756,10 @@ func (o *OrderData) GetBSON() (interface{}, error) {
 		OrderVolume: volume,
 		OrderCount:  count,
 		BestPrice:   bestPrice,
-	}, nil
+	})
 }
 
-func (o *OrderData) SetBSON(raw bson.Raw) error {
+func (o *OrderData) UnmarshalBSON(data []byte) error {
 	type PairIDRecord struct {
 		PairName   string `json:"pairName" bson:"pairName"`
 		BaseToken  string `json:"baseToken" bson:"baseToken"`
@@ -771,7 +773,7 @@ func (o *OrderData) SetBSON(raw bson.Raw) error {
 		BestPrice   float64      `json:"bestPrice" bson:"bestPrice"`
 	})
 
-	err := raw.Unmarshal(decoded)
+	err := unmarshalBSON(data, decoded)
 	if err != nil {
 		return err
 	}

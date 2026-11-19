@@ -1,7 +1,6 @@
 package daos
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/byteball/odex-backend/types"
@@ -9,12 +8,7 @@ import (
 )
 
 func init() {
-	server := testutils.NewDBTestServer()
-	temp, _ := ioutil.TempDir("", "test")
-	server.SetPath(temp)
-
-	session := server.Session()
-	db = &Database{Session: session}
+	db = &Database{Session: testutils.NewDBTestClient()}
 }
 
 func TestTokenDao(t *testing.T) {
@@ -23,7 +17,7 @@ func TestTokenDao(t *testing.T) {
 
 	token := &types.Token{
 		Symbol:   "PRFT",
-		Asset:  "0x6e9a406696617ec5105f9382d33ba3360fcfabcc",
+		Asset:    "0x6e9a406696617ec5105f9382d33ba3360fcfabcc",
 		Decimals: 18,
 		Active:   true,
 		Quote:    true,

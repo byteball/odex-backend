@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func ComparePair(t *testing.T, a, b *Pair) {
@@ -19,7 +19,7 @@ func ComparePair(t *testing.T, a, b *Pair) {
 
 func TestPairBSON(t *testing.T) {
 	pair := &Pair{
-		ID:               bson.NewObjectId(),
+		ID:               bson.NewObjectID(),
 		BaseTokenSymbol:  "REQ",
 		BaseAsset:        "0xcf7389dc6c63637598402907d5431160ec8972a5",
 		QuoteTokenSymbol: "WETH",

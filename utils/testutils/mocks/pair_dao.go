@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	bson "github.com/globalsign/mgo/bson"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -99,11 +99,11 @@ func (_m *PairDao) GetByAsset(baseToken string, quoteToken string) (*types.Pair,
 }
 
 // GetByID provides a mock function with given fields: id
-func (_m *PairDao) GetByID(id bson.ObjectId) (*types.Pair, error) {
+func (_m *PairDao) GetByID(id bson.ObjectID) (*types.Pair, error) {
 	ret := _m.Called(id)
 
 	var r0 *types.Pair
-	if rf, ok := ret.Get(0).(func(bson.ObjectId) *types.Pair); ok {
+	if rf, ok := ret.Get(0).(func(bson.ObjectID) *types.Pair); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
@@ -112,7 +112,7 @@ func (_m *PairDao) GetByID(id bson.ObjectId) (*types.Pair, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bson.ObjectId) error); ok {
+	if rf, ok := ret.Get(1).(func(bson.ObjectID) error); ok {
 		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)

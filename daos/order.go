@@ -5,8 +5,9 @@ import (
 
 	"github.com/byteball/odex-backend/app"
 	"github.com/byteball/odex-backend/types"
-	mgo "github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // OrderDao contains:
@@ -39,95 +40,21 @@ func NewOrderDao(opts ...OrderDaoOption) *OrderDao {
 		}
 	}
 
-	index := mgo.Index{
-		Key:    []string{"hash"},
-		Unique: true,
+	indexes := []mongo.IndexModel{
+		{Keys: keySpec("hash"), Options: options.Index().SetUnique(true)},
+		{Keys: keySpec("userAddress", "status")},
+		{Keys: keySpec("status")},
+		{Keys: keySpec("baseToken")},
+		{Keys: keySpec("quoteToken")},
+		{Keys: keySpec("baseToken", "quoteToken", "status", "side", "price")},
+		{Keys: keySpec("userAddress", "quoteToken", "side", "status")},
+		{Keys: keySpec("userAddress", "baseToken", "side", "status")},
 	}
 
-	i1 := mgo.Index{
-		Key: []string{"userAddress", "status"},
-	}
-
-	i2 := mgo.Index{
-		Key: []string{"status"},
-	}
-
-	i3 := mgo.Index{
-		Key: []string{"baseToken"},
-	}
-
-	i4 := mgo.Index{
-		Key: []string{"quoteToken"},
-	}
-
-	/*i5 := mgo.Index{
-		Key:       []string{"price"},
-		Collation: &mgo.Collation{NumericOrdering: true, Locale: "en"},
-	}*/
-
-	i6 := mgo.Index{
-		Key: []string{"baseToken", "quoteToken", "status", "side", "price"},
-	}
-
-	i7 := mgo.Index{
-		Key: []string{"userAddress", "quoteToken", "side", "status"},
-	}
-
-	i8 := mgo.Index{
-		Key: []string{"userAddress", "baseToken", "side", "status"},
-	}
-
-	/*i7 := mgo.Index{
-		Key: []string{"side", "status"},
-	}*/
-
-	/*i8 := mgo.Index{
-		Key: []string{"baseToken", "quoteToken", "side", "status"},
-	}*/
-
-	err := db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(index)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i1)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i2)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i3)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i4)
-	if err != nil {
-		panic(err)
-	}
-
-	/*err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i5)
-	if err != nil {
-		panic(err)
-	}*/
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i6)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i7)
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Session.DB(dao.dbName).C(dao.collectionName).EnsureIndex(i8)
-	if err != nil {
-		panic(err)
+	for _, index := range indexes {
+		if err := db.EnsureIndex(dao.dbName, dao.collectionName, index); err != nil {
+			panic(err)
+		}
 	}
 
 	return dao
@@ -135,7 +62,7 @@ func NewOrderDao(opts ...OrderDaoOption) *OrderDao {
 
 // Create function performs the DB insertion task for Order collection
 func (dao *OrderDao) Create(o *types.Order) error {
-	o.ID = bson.NewObjectId()
+	o.ID = bson.NewObjectID()
 	o.CreatedAt = time.Now()
 	o.UpdatedAt = time.Now()
 
@@ -179,10 +106,10 @@ func (dao *OrderDao) Delete(orders ...*types.Order) error {
 
 // Update function performs the DB updations task for Order collection
 // corresponding to a particular order ID
-func (dao *OrderDao) Update(id bson.ObjectId, o *types.Order) error {
+func (dao *OrderDao) Update(id bson.ObjectID, o *types.Order) error {
 	o.UpdatedAt = time.Now()
 
-	err := db.Update(dao.dbName, dao.collectionName, bson.M{"_id": id}, o)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"_id": id}, o, false)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -191,10 +118,10 @@ func (dao *OrderDao) Update(id bson.ObjectId, o *types.Order) error {
 	return nil
 }
 
-func (dao *OrderDao) Upsert(id bson.ObjectId, o *types.Order) error {
+func (dao *OrderDao) Upsert(id bson.ObjectID, o *types.Order) error {
 	o.UpdatedAt = time.Now()
 
-	err := db.Upsert(dao.dbName, dao.collectionName, bson.M{"_id": id}, o)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"_id": id}, o, true)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -216,7 +143,7 @@ func (dao *OrderDao) UpsertByHash(h string, o *types.Order) error {
 func (dao *OrderDao) UpdateAllByHash(h string, o *types.Order) error {
 	o.UpdatedAt = time.Now()
 
-	err := db.Update(dao.dbName, dao.collectionName, bson.M{"hash": h}, o)
+	err := db.Replace(dao.dbName, dao.collectionName, bson.M{"hash": h}, o, false)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -229,14 +156,9 @@ func (dao *OrderDao) FindAndModify(h string, o *types.Order) (*types.Order, erro
 	o.UpdatedAt = time.Now()
 	query := bson.M{"hash": h}
 	updated := &types.Order{}
-	change := mgo.Change{
-		Update:    types.OrderBSONUpdate{Order: o},
-		Upsert:    true,
-		Remove:    false,
-		ReturnNew: true,
-	}
+	update := types.OrderBSONUpdate{Order: o}
 
-	err := db.FindAndModify(dao.dbName, dao.collectionName, query, change, &updated)
+	err := db.FindAndModify(dao.dbName, dao.collectionName, query, update, updated)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -245,7 +167,7 @@ func (dao *OrderDao) FindAndModify(h string, o *types.Order) (*types.Order, erro
 	return updated, nil
 }
 
-//UpdateByHash updates fields that are considered updateable for an order.
+// UpdateByHash updates fields that are considered updateable for an order.
 func (dao *OrderDao) UpdateByHash(h string, o *types.Order) error {
 	o.UpdatedAt = time.Now()
 	query := bson.M{"hash": h}
@@ -383,15 +305,8 @@ func (dao *OrderDao) UpdateOrderFilledAmounts(hashes []string, amount []int64) (
 			"status":       status,
 			"filledAmount": filledAmount,
 		}}
-		change := mgo.Change{
-			Update:    update,
-			Upsert:    true,
-			Remove:    false,
-			ReturnNew: true,
-		}
-
 		updated := &types.Order{}
-		err := db.FindAndModify(dao.dbName, dao.collectionName, query, change, updated)
+		err := db.FindAndModify(dao.dbName, dao.collectionName, query, update, updated)
 		if err != nil {
 			logger.Error(err)
 			return nil, err
@@ -405,7 +320,7 @@ func (dao *OrderDao) UpdateOrderFilledAmounts(hashes []string, amount []int64) (
 
 // GetByID function fetches a single document from order collection based on mongoDB ID.
 // Returns Order type struct
-func (dao *OrderDao) GetByID(id bson.ObjectId) (*types.Order, error) {
+func (dao *OrderDao) GetByID(id bson.ObjectID) (*types.Order, error) {
 	var response *types.Order
 	err := db.GetByID(dao.dbName, dao.collectionName, id, &response)
 	return response, err
