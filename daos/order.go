@@ -43,7 +43,6 @@ func NewOrderDao(opts ...OrderDaoOption) *OrderDao {
 	indexes := []mongo.IndexModel{
 		{Keys: keySpec("hash"), Options: options.Index().SetUnique(true)},
 		{Keys: keySpec("userAddress", "status")},
-		{Keys: keySpec("status", "originalOrder.signed_message.expiry_ts")},
 		{Keys: keySpec("baseToken")},
 		{Keys: keySpec("quoteToken")},
 		{Keys: keySpec("baseToken", "quoteToken", "status", "side", "price")},
@@ -56,6 +55,14 @@ func NewOrderDao(opts ...OrderDaoOption) *OrderDao {
 			panic(err)
 		}
 	}
+
+	// Building this on a large collection can take minutes, so don't block startup on it.
+	go func() {
+		expiryIndex := mongo.IndexModel{Keys: keySpec("status", "originalOrder.signed_message.expiry_ts")}
+		if err := db.EnsureIndex(dao.dbName, dao.collectionName, expiryIndex); err != nil {
+			logger.Error("failed to create expiry index:", err)
+		}
+	}()
 
 	return dao
 }

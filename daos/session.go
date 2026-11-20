@@ -24,7 +24,7 @@ type Database struct {
 var db *Database
 var logger = utils.Logger
 var defaultTimeout = 10 * time.Second
-var indexTimeout = time.Minute
+var indexTimeout = 30 * time.Minute
 
 func InitSession(session *mongo.Client) (*mongo.Client, error) {
 	if db == nil {
