@@ -361,7 +361,9 @@ func (s *OrderService) CancelOrdersSignedByRevokedSigner(address string, signer 
 func (s *OrderService) CancelExpiredOrders() {
 	orders, err := s.orderDao.GetExpiredOrders()
 	if err != nil {
-		panic(err)
+		// transient DB errors (e.g. timeouts) are retried on the next tick
+		logger.Error("failed to get expired orders, will retry:", err)
+		return
 	}
 	logger.Info("will cancel", len(orders), "expired orders")
 	for _, order := range orders {
