@@ -43,7 +43,7 @@ func NewOrderDao(opts ...OrderDaoOption) *OrderDao {
 	indexes := []mongo.IndexModel{
 		{Keys: keySpec("hash"), Options: options.Index().SetUnique(true)},
 		{Keys: keySpec("userAddress", "status")},
-		{Keys: keySpec("status")},
+		{Keys: keySpec("status", "originalOrder.signed_message.expiry_ts")},
 		{Keys: keySpec("baseToken")},
 		{Keys: keySpec("quoteToken")},
 		{Keys: keySpec("baseToken", "quoteToken", "status", "side", "price")},
