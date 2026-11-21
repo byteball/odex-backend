@@ -77,6 +77,7 @@ func (s *TradeSocket) UnsubscribeChannel(channelID string, c *Client) {
 		s.subscriptions[channelID][c] = false
 		delete(s.subscriptions[channelID], c)
 	}
+	removeSubscription(s.subscriptionsList, c, channelID)
 }
 
 func (s *TradeSocket) Unsubscribe(c *Client) {
@@ -94,6 +95,7 @@ func (s *TradeSocket) Unsubscribe(c *Client) {
 			delete(s.subscriptions[id], c)
 		}
 	}
+	delete(s.subscriptionsList, c)
 }
 
 // BroadcastMessage broadcasts trade message to all subscribed sockets

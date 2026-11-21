@@ -195,6 +195,12 @@ func (d *Database) GetAndSort(dbName, collection string, query interface{}, sort
 	return d.find(dbName, collection, query, opts, response)
 }
 
+// QueryAndSort is like GetAndSort but only fetches the fields named in selector.
+func (d *Database) QueryAndSort(dbName, collection string, query interface{}, selector interface{}, sort []string, response interface{}) (err error) {
+	opts := options.Find().SetSort(keySpec(sort...)).SetProjection(selector)
+	return d.find(dbName, collection, query, opts, response)
+}
+
 func (d *Database) find(dbName, collection string, query interface{}, opts *options.FindOptionsBuilder, response interface{}) error {
 	ctx, cancel := readContext()
 	defer cancel()

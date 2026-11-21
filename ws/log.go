@@ -21,11 +21,13 @@ func NewWebsocketLogger() *WebsocketLogger {
 }
 
 func (l *WebsocketLogger) LogMessageIn(msg *types.WebsocketMessage) {
-	l.mainLogger.Infof("Receiving %v/%v message", msg.Channel, msg.Event.Type, utils.JSON(msg))
-	l.websocketMessageLogger.Infof("Receiving %v/%v message", msg.Channel, msg.Event.Type, utils.JSON(msg))
+	j := utils.JSON(msg)
+	l.mainLogger.Infof("Receiving %v/%v message", msg.Channel, msg.Event.Type, j)
+	l.websocketMessageLogger.Infof("Receiving %v/%v message", msg.Channel, msg.Event.Type, j)
 }
 
 func (l *WebsocketLogger) LogMessageOut(msg *types.WebsocketMessage) {
-	l.mainLogger.Infof("Sending %v/%v message", msg.Channel, msg.Event.Type, utils.JSON(msg))
-	l.websocketMessageLogger.Infof("Sending %v/%v message", msg.Channel, msg.Event.Type, utils.JSON(msg))
+	j := utils.JSON(msg)
+	l.mainLogger.Infof("Sending %v/%v message", msg.Channel, msg.Event.Type, j)
+	l.websocketMessageLogger.Infof("Sending %v/%v message", msg.Channel, msg.Event.Type, j)
 }

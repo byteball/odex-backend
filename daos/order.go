@@ -20,6 +20,21 @@ type OrderDao struct {
 
 type OrderDaoOption = func(*OrderDao) error
 
+// orderBookProjection lists the only fields needed to aggregate price levels and compute MatcherFeeRate.
+var orderBookProjection = bson.M{
+	"price":          1,
+	"side":           1,
+	"matcherAddress": 1,
+	"amount":         1,
+	"filledAmount":   1,
+	"originalOrder.signed_message.matcher_fee":       1,
+	"originalOrder.signed_message.matcher_fee_asset": 1,
+	"originalOrder.signed_message.sell_amount":       1,
+	"originalOrder.signed_message.sell_asset":        1,
+	"originalOrder.signed_message.buy_asset":         1,
+	"originalOrder.signed_message.price":             1,
+}
+
 func OrderDaoDBOption(dbName string) func(dao *OrderDao) error {
 	return func(dao *OrderDao) error {
 		dao.dbName = dbName
@@ -621,7 +636,16 @@ func (dao *OrderDao) GetOrderBook(p *types.Pair) ([]map[string]interface{}, []ma
 
 	bids := []map[string]interface{}{}
 	asks := []map[string]interface{}{}
-	orders, _ := dao.GetRawOrderBook(p)
+	var orders []*types.Order
+	q := bson.M{
+		"status":     bson.M{"$in": []string{"OPEN", "PARTIAL_FILLED"}},
+		"baseToken":  p.BaseAsset,
+		"quoteToken": p.QuoteAsset,
+	}
+	if err := db.QueryAndSort(dao.dbName, dao.collectionName, q, orderBookProjection, []string{"price"}, &orders); err != nil {
+		logger.Error(err)
+		return nil, nil, err
+	}
 	sum := int64(0)
 	for i, o := range orders {
 		sum += o.Amount - o.FilledAmount
@@ -652,7 +676,6 @@ func (dao *OrderDao) GetOrderBook(p *types.Pair) ([]map[string]interface{}, []ma
 		logger.Error(err)
 		return nil, nil, err
 	}*/
-	logger.Info("bids", bids)
 
 	return bids, asks, nil
 }
@@ -698,7 +721,7 @@ func (dao *OrderDao) GetOrderBookPrice(p *types.Pair, pp float64, side string) (
 	}*/
 
 	var orders []*types.Order
-	err := db.Get(dao.dbName, dao.collectionName, q, 0, 0, &orders)
+	err := db.Query(dao.dbName, dao.collectionName, q, orderBookProjection, 0, 0, &orders)
 	if err != nil {
 		panic(err)
 	}

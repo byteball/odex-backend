@@ -62,7 +62,7 @@ func (e *tradeEndpoint) HandleGetTradeHistory(w http.ResponseWriter, r *http.Req
 
 	baseToken := bt
 	quoteToken := qt
-	res, err := e.tradeService.GetSortedTrades(baseToken, quoteToken, limit)
+	res, err := e.tradeService.GetSortedTrades(baseToken, quoteToken, clampLimit(limit))
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")
@@ -99,7 +99,7 @@ func (e *tradeEndpoint) HandleGetTrades(w http.ResponseWriter, r *http.Request) 
 	}
 
 	address := addr
-	res, err := e.tradeService.GetSortedTradesByUserAddress(address, lim)
+	res, err := e.tradeService.GetSortedTradesByUserAddress(address, clampLimit(lim))
 	if err != nil {
 		logger.Error(err)
 		httputils.WriteError(w, http.StatusInternalServerError, "")

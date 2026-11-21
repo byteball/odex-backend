@@ -42,3 +42,20 @@ func getChannels() map[string]func(interface{}, *Client) {
 
 	return socketChannels
 }
+
+// removeSubscription drops channelID from the client's list so that closed clients are not retained.
+// The caller must hold the socket's lock.
+func removeSubscription(list map[*Client][]string, c *Client, channelID string) {
+	remaining := make([]string, 0, len(list[c]))
+	for _, id := range list[c] {
+		if id != channelID {
+			remaining = append(remaining, id)
+		}
+	}
+
+	if len(remaining) == 0 {
+		delete(list, c)
+	} else {
+		list[c] = remaining
+	}
+}

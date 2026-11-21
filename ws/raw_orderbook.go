@@ -83,17 +83,20 @@ func (s *RawOrderBookSocket) UnsubscribeChannel(channelID string, c *Client) {
 		s.subscriptions[channelID][c] = false
 		delete(s.subscriptions[channelID], c)
 	}
+	removeSubscription(s.subscriptionsList, c, channelID)
 }
 
 func (s *RawOrderBookSocket) Unsubscribe(c *Client) {
-	channelIDs := s.subscriptionsList[c]
-	if channelIDs == nil {
-		return
-	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, id := range s.subscriptionsList[c] {
-		s.UnsubscribeChannel(id, c)
+		if s.subscriptions[id][c] {
+			s.subscriptions[id][c] = false
+			delete(s.subscriptions[id], c)
+		}
 	}
+	delete(s.subscriptionsList, c)
 }
 
 // BroadcastMessage streams message to all the subscribtions subscribed to the pair

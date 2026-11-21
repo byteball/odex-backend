@@ -77,6 +77,7 @@ func (s *LoginSocket) UnsubscribeChannel(sessionId string, c *Client) {
 		s.subscriptions[sessionId][c] = false
 		delete(s.subscriptions[sessionId], c)
 	}
+	removeSubscription(s.subscriptionsList, c, sessionId)
 }
 
 func (s *LoginSocket) Unsubscribe(c *Client) {
@@ -94,6 +95,7 @@ func (s *LoginSocket) Unsubscribe(c *Client) {
 			delete(s.subscriptions[id], c)
 		}
 	}
+	delete(s.subscriptionsList, c)
 }
 
 func IsClientConnectedToSession(sessionId string, c *Client) bool {

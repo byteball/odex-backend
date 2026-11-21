@@ -119,6 +119,9 @@ func writeHandler(c *Client) {
 				return
 			}
 
+		case <-c.done:
+			return
+
 		case m, ok := <-c.send:
 			c.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {

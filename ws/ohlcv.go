@@ -82,6 +82,7 @@ func (s *OHLCVSocket) UnsubscribeChannel(channelID string, c *Client) {
 		s.subscriptions[channelID][c] = false
 		delete(s.subscriptions[channelID], c)
 	}
+	removeSubscription(s.subscriptionsList, c, channelID)
 }
 
 func (s *OHLCVSocket) Unsubscribe(c *Client) {
@@ -99,6 +100,7 @@ func (s *OHLCVSocket) Unsubscribe(c *Client) {
 			delete(s.subscriptions[id], c)
 		}
 	}
+	delete(s.subscriptionsList, c)
 }
 
 // BroadcastOHLCV Message streams message to all the subscriptions subscribed to the pair

@@ -57,10 +57,10 @@ func (e *orderEndpoint) handleGetOrders(w http.ResponseWriter, r *http.Request) 
 	address := addr
 
 	if limit == "" {
-		orders, err = e.orderService.GetByUserAddress(address)
+		orders, err = e.orderService.GetByUserAddress(address, clampLimit(0))
 	} else {
 		lim, _ := strconv.Atoi(limit)
-		orders, err = e.orderService.GetByUserAddress(address, lim)
+		orders, err = e.orderService.GetByUserAddress(address, clampLimit(lim))
 	}
 
 	if err != nil {
@@ -137,10 +137,10 @@ func (e *orderEndpoint) handleGetOrderHistory(w http.ResponseWriter, r *http.Req
 	address := addr
 
 	if limit == "" {
-		orders, err = e.orderService.GetHistoryByUserAddress(address)
+		orders, err = e.orderService.GetHistoryByUserAddress(address, clampLimit(0))
 	} else {
 		lim, _ := strconv.Atoi(limit)
-		orders, err = e.orderService.GetHistoryByUserAddress(address, lim)
+		orders, err = e.orderService.GetHistoryByUserAddress(address, clampLimit(lim))
 	}
 
 	if err != nil {

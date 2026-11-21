@@ -76,6 +76,7 @@ func (s *OrderBookSocket) UnsubscribeChannel(channelID string, c *Client) {
 		s.subscriptions[channelID][c] = false
 		delete(s.subscriptions[channelID], c)
 	}
+	removeSubscription(s.subscriptionsList, c, channelID)
 }
 
 func (s *OrderBookSocket) Unsubscribe(c *Client) {
@@ -93,6 +94,7 @@ func (s *OrderBookSocket) Unsubscribe(c *Client) {
 			delete(s.subscriptions[id], c)
 		}
 	}
+	delete(s.subscriptionsList, c)
 }
 
 // BroadcastMessage streams message to all the subscribtions subscribed to the pair
