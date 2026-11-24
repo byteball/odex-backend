@@ -720,6 +720,7 @@ func (s *OrderService) broadcastOrderBookUpdate(orders []*types.Order) {
 		amount, matcherAddress, matcherFeeRate, err := s.orderDao.GetOrderBookPrice(p, pp, side)
 		if err != nil {
 			logger.Error(err)
+			continue
 		}
 
 		// case where the amount at the pricepoint is equal to 0

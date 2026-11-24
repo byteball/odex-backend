@@ -550,7 +550,8 @@ func (dao *OrderDao) GetRawOrderBook(p *types.Pair) ([]*types.Order, error) {
 
 	err := db.GetAndSort(dao.dbName, dao.collectionName, q, []string{"price"}, 0, 0, &orders)
 	if err != nil {
-		panic(err)
+		logger.Error(err)
+		return nil, err
 	}
 	/*err := db.Aggregate(dao.dbName, dao.collectionName, q, &orders)
 	if err != nil {
@@ -723,7 +724,8 @@ func (dao *OrderDao) GetOrderBookPrice(p *types.Pair, pp float64, side string) (
 	var orders []*types.Order
 	err := db.Query(dao.dbName, dao.collectionName, q, orderBookProjection, 0, 0, &orders)
 	if err != nil {
-		panic(err)
+		logger.Error(err)
+		return 0, "", 0, err
 	}
 	amount := int64(0)
 	matcherFeeRate := float64(0)
