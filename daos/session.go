@@ -55,6 +55,7 @@ func (d *Database) InitDatabase(session *mongo.Client) {
 // connect creates a client and checks that the server is reachable
 func connect(opts *options.ClientOptions, timeout time.Duration) *mongo.Client {
 	opts.SetRegistry(types.BSONRegistry)
+	opts.SetMonitor(newSlowQueryMonitor())
 
 	client, err := mongo.Connect(opts)
 	if err != nil {
