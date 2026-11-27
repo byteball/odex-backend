@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/byteball/odex-backend/interfaces"
 	"github.com/byteball/odex-backend/types"
@@ -10,6 +9,16 @@ import (
 
 	"github.com/byteball/odex-backend/ws"
 )
+
+var errPairNotFound = errors.New("Pair not found")
+
+// subscribeClientError returns a message safe to send to websocket clients; DB errors are hidden.
+func subscribeClientError(err error) string {
+	if errors.Is(err, errPairNotFound) {
+		return err.Error()
+	}
+	return "Internal server error"
+}
 
 // PairService struct with daos required, responsible for communicating with daos.
 // PairService functions are responsible for interacting with daos and implements business logics.
@@ -37,7 +46,7 @@ func (s *OrderBookService) GetOrderBook(bt, qt string) (map[string]interface{}, 
 	}
 
 	if pair == nil {
-		return nil, errors.New("Pair not found")
+		return nil, errPairNotFound
 	}
 
 	bids, asks, err := s.orderDao.GetOrderBook(pair)
@@ -62,7 +71,7 @@ func (s *OrderBookService) SubscribeOrderBook(c *ws.Client, bt, qt string) {
 
 	ob, err := s.GetOrderBook(bt, qt)
 	if err != nil {
-		socket.SendErrorMessage(c, err.Error())
+		socket.SendErrorMessage(c, subscribeClientError(err))
 		return
 	}
 
@@ -99,7 +108,7 @@ func (s *OrderBookService) GetRawOrderBook(bt, qt string) (*types.RawOrderBook, 
 	}
 
 	if pair == nil {
-		return nil, fmt.Errorf("Pair does not exist")
+		return nil, errPairNotFound
 	}
 
 	orders, err := s.orderDao.GetRawOrderBook(pair)
@@ -121,7 +130,7 @@ func (s *OrderBookService) SubscribeRawOrderBook(c *ws.Client, bt, qt string) {
 
 	ob, err := s.GetRawOrderBook(bt, qt)
 	if err != nil {
-		socket.SendErrorMessage(c, err.Error())
+		socket.SendErrorMessage(c, subscribeClientError(err))
 		return
 	}
 

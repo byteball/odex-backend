@@ -45,7 +45,7 @@ func (s *OHLCVService) Subscribe(conn *ws.Client, p *types.SubscriptionPayload) 
 
 	if err != nil {
 		logger.Error(err)
-		socket.SendErrorMessage(conn, err.Error())
+		socket.SendErrorMessage(conn, "Internal server error")
 		return
 	}
 

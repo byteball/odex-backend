@@ -26,7 +26,7 @@ func (s *TradeService) Subscribe(c *ws.Client, bt, qt string) {
 	trades, err := s.GetSortedTrades(bt, qt, numTrades)
 	if err != nil {
 		logger.Error(err)
-		socket.SendErrorMessage(c, err.Error())
+		socket.SendErrorMessage(c, "Internal server error")
 		return
 	}
 
